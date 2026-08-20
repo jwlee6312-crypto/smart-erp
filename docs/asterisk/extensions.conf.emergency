@@ -1,0 +1,28 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+
+[from-internal]
+exten => _X.,1,NoOp(### Dialed: ${EXTEN} ###)
+ same => n,Goto(internal-logic,${EXTEN},1)
+
+[internal-logic]
+; 에코 테스트
+exten => 600,1,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+
+; 내선번호로 직접 호출 (PJSIP/번호)
+exten => _1XX,1,Dial(PJSIP/${EXTEN},30)
+ same => n,Hangup()
+
+[incoming-main]
+exten => _X.,1,NoOp(### Inbound Call ###)
+ same => n,Dial(PJSIP/103,30)
+ same => n,Hangup()
+
+[haion-outbound]
+exten => _X.,1,NoOp(### Outbound Call ###)
+ same => n,Set(CALLERID(all)="CRM Bank" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${IF($[${EXTEN:0:1}=0]?+82${EXTEN:1}:${EXTEN})}@crm-bank-erp.pstn.tokyo.twilio.com,60)
+ same => n,Hangup()

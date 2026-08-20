@@ -1,0 +1,7 @@
+- [ ] Identify all corrupted files in `erp-mobile-backend` using `grep` and the provided build error log.
+- [ ] Systematic restoration of Korean text:
+    - [ ] Fix `application.properties` and `env.properties`.
+    - [ ] Fix `src/main/java/com/crmbank/erp/mobile` (Java files).
+    - [ ] Fix `src/main/resources/com/crmbank/erp/mobile` (XML mappers).
+- [ ] Verify the fixes by running `./gradlew :erp-mobile-backend:compileJava`.
+- [ ] Final check for any remaining Mojibake.

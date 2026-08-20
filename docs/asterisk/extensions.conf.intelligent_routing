@@ -1,0 +1,76 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+API_URL=http://172.19.192.1:8080/crm/inbound/asterisk/check-routing
+
+[from-internal]
+; --- 1단계: 모든 전화에 대해 공통 전처리 ---
+exten => _X.,1,NoOp(### NEW CALL: ${CALLERID(num)} -> ${EXTEN} ###)
+ same => n,Set(JITTERBUFFER(fixed)=default)
+ same => n,Goto(intelligent-router,${EXTEN},1)
+
+[intelligent-router]
+; 600: 에코 테스트
+exten => 600,1,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+
+; 일반 내선 및 외부 수신 통합 라우팅
+exten => _X.,1,NoOp(### CHECKING STATUS FOR ${EXTEN} ###)
+ same => n,Set(RESULT=${CURL(${API_URL}?exten=${EXTEN})})
+ same => n,NoOp(### API RESULT: ${RESULT} ###)
+
+ ; 1. 휴일/업무종료 체크 (당직 연결 포함)
+ same => n,GotoIf($["${RESULT}" = "HOLIDAY"]?holiday)
+ same => n,GotoIf($["${RESULT:0:15}" = "OFF_HOURS_DUTY"]?duty_forward)
+ same => n,GotoIf($["${RESULT}" = "OFF_HOURS"]?off_hours)
+
+ ; 2. 상담원 상태 체크
+ same => n,GotoIf($["${RESULT}" = "INVALID_AGENT"]?invalid)
+ same => n,GotoIf($["${RESULT}" = "VACATION"]?vacation)
+ same => n,GotoIf($["${RESULT:0:6}" = "OUTING"]?mobile_forward)
+ same => n,GotoIf($["${RESULT:0:11}" = "MOBILE_ONLY"]?mobile_forward)
+
+ ; 3. 정상 연결 (15초간 앱 호출 후 미응답 시 자동 휴대폰 전환 로직 포함 가능)
+ same => n,Dial(PJSIP/${EXTEN},15,c)
+ same => n,GotoIf($["${DIALSTATUS}" != "ANSWER"]?check_auto_forward)
+ same => n,Hangup()
+
+ ; [상세 분기 처리]
+ same => n(duty_forward),Set(DUTY_NUM=${CUT(RESULT,:,2)})
+  same => n,NoOp(### FORWARDING TO DUTY: ${DUTY_NUM} ###)
+  same => n,Dial(${OFFICE_TRUNK}/sip:${DUTY_NUM}@crm-bank-erp.pstn.tokyo.twilio.com,30,c)
+  same => n,Hangup()
+
+ same => n(mobile_forward),Set(MOB_NUM=${CUT(RESULT,:,2)})
+  same => n,NoOp(### FORWARDING TO MOBILE: ${MOB_NUM} ###)
+  same => n,Dial(${OFFICE_TRUNK}/sip:${MOB_NUM}@crm-bank-erp.pstn.tokyo.twilio.com,30,c)
+  same => n,Hangup()
+
+ same => n(check_auto_forward),NoOp(### NO ANSWER - CHECKING MOBILE BACKUP ###)
+  ; 여기서 다시 한번 모바일 번호가 있는지 확인 후 전환 가능 (현재는 종료)
+  same => n,Hangup()
+
+ same => n(holiday),Playback(vm-goodbye) ; 휴일 안내 음원 교체 필요
+  same => n,Hangup()
+
+ same => n(off_hours),Playback(vm-goodbye) ; 야간 안내 음원 교체 필요
+  same => n,Hangup()
+
+ same => n(vacation),Playback(vm-nobodyavail) ; 휴가 안내
+  same => n,Hangup()
+
+ same => n(invalid),Playback(ss-noservice) ; 없는 번호
+  same => n,Hangup()
+
+[incoming-main]
+exten => _X.,1,NoOp(### INBOUND FROM TWILIO ###)
+ same => n,Goto(intelligent-router,103,1) ; 외부 전화를 103번 지능형 로직으로 연결
+
+[haion-outbound]
+exten => _X.,1,NoOp(### OUTBOUND CALL ###)
+ same => n,Set(CALLERID(all)="CRM Bank" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${IF($[${EXTEN:0:1}=0]?+82${EXTEN:1}:${EXTEN})}@crm-bank-erp.pstn.tokyo.twilio.com,60,c)
+ same => n,Hangup()
+
+exten => h,1,Hangup()

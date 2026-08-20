@@ -1,0 +1,48 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+
+[from-internal]
+; --- 전역 품질 및 종료 동기화 설정 ---
+exten => _X.,1,NoOp(### CALL START: ${CALLERID(num)} -> ${EXTEN} ###)
+ same => n,Set(JITTERBUFFER(fixed)=default)
+ same => n,Goto(internal-logic,${EXTEN},1)
+
+[internal-logic]
+; 600: 에코 테스트 (기초 음질 검증용)
+exten => 600,1,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+
+; 1XX: 내선 통화 + 지능형 모바일 라우팅
+exten => _1XX,1,NoOp(### EXTENSION CALL: ${EXTEN} ###)
+ same => n,Dial(PJSIP/${EXTEN},15,c) ; 앱으로 15초간 호출 (c 옵션으로 종료 동기화)
+ same => n,GotoIf($["${DIALSTATUS}" = "ANSWER"]?end)
+
+ ; [아이디어 적용] 앱이 응답 없거나 오프라인일 때 DB에서 휴대폰 번호 조회
+ same => n,NoOp(### APP UNREACHABLE - SEARCHING DB FOR MOBILE BACKUP ###)
+ same => n,Set(MB=${REALTIME(ps_endpoints,id,${EXTEN},mobile_no)})
+ same => n,GotoIf($["${MB}" = ""]?no_backup)
+
+ ; 휴대폰으로 자동 전환
+ same => n,NoOp(### ROUTING TO MOBILE BACKUP: ${MB} ###)
+ same => n,Set(CALLERID(all)="CRM BACKUP" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${MB}@crm-bank-erp.pstn.tokyo.twilio.com,30,c)
+ same => n,Hangup()
+
+ same => n(no_backup),NoOp(### NO MOBILE BACKUP FOR ${EXTEN} ###)
+ same => n,Hangup()
+ same => n(end),Hangup()
+
+[incoming-main]
+exten => _X.,1,NoOp(### INBOUND CALL FROM TWILIO ###)
+ same => n,Goto(internal-logic,103,1) ; 외부 전화를 103번(앱+휴대폰)으로 연결
+
+[haion-outbound]
+exten => _X.,1,NoOp(### OUTBOUND CALL ###)
+ same => n,Set(CALLERID(all)="CRM Bank" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${IF($[${EXTEN:0:1}=0]?+82${EXTEN:1}:${EXTEN})}@crm-bank-erp.pstn.tokyo.twilio.com,60,c)
+ same => n,Hangup()
+
+exten => h,1,NoOp(### SESSION CLEANUP ###)
+ same => n,Hangup()

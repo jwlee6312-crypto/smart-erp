@@ -1,0 +1,40 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+
+[from-internal]
+; --- Debug: Log all attempts ---
+exten => _X.,1,NoOp(### CALL from ${CALLERID(num)} to ${EXTEN} ###)
+ same => n,Goto(internal-logic,${EXTEN},1)
+
+[internal-logic]
+; Echo Test
+exten => 600,1,NoOp(### ECHO TEST ###)
+ same => n,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+
+; Internal extensions (101-199)
+exten => _1XX,1,NoOp(### INTERNAL CALL to ${EXTEN} ###)
+ same => n,Dial(PJSIP/${EXTEN},20)
+ same => n,Hangup()
+
+; Twilio Self Test
+exten => 888,1,NoOp(### TWILIO SELF TEST ###)
+ same => n,Set(CALLERID(all)="Self Test" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${MY_TWILIO_NUM}@crm-bank-erp.pstn.tokyo.twilio.com,30)
+ same => n,Hangup()
+
+[incoming-main]
+exten => _X.,1,NoOp(### INBOUND CALL FROM TWILIO ###)
+ same => n,Answer()
+ same => n,Playback(hello-world)
+ same => n,Dial(PJSIP/103,30)
+ same => n,Hangup()
+
+[haion-outbound]
+exten => _X.,1,NoOp(### OUTBOUND CALL to ${EXTEN} ###)
+ same => n,Set(TARGET_NUM=${IF($[${EXTEN:0:1}=0]?+82${EXTEN:1}:${EXTEN})})
+ same => n,Set(CALLERID(all)="CRM Bank" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${TARGET_NUM}@crm-bank-erp.pstn.tokyo.twilio.com,60)
+ same => n,Hangup()

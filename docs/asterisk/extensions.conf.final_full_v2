@@ -1,0 +1,95 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+API_URL=http://172.19.192.1:8080/crm/inbound/asterisk/check-routing
+ERP_API=http://172.19.192.1:8080/crm/inbound
+
+[from-internal]
+; --- 전역 전처리: 녹취 시작 및 지능형 라우팅 ---
+exten => _X.,1,NoOp(### NEW CALL: ${CALLERID(num)} -> ${EXTEN} ###)
+ same => n,Set(REC_FILE=${STRFTIME(${EPOCH},,%Y%m%d-%H%M%S)}-${CALLERID(num)}-${EXTEN}-${UNIQUEID}.wav)
+ same => n,MixMonitor(${REC_FILE})
+ same => n,Set(JITTERBUFFER(fixed)=default)
+ same => n,Goto(intelligent-router,${EXTEN},1)
+
+[intelligent-router]
+; 600: 에코 테스트
+exten => 600,1,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+
+; 지능형 라우팅 엔진
+exten => _X.,1,NoOp(### ANALYZING ROUTING FOR ${EXTEN} ###)
+ same => n,Set(RESULT=${CURL(${API_URL}?exten=${EXTEN})})
+
+ ; 1. 차단 및 휴가 처리
+ same => n,GotoIf($["${RESULT:0:5}" = "BLOCK"]?blocked)
+
+ ; 2. 즉시 리다이렉트 (야간/휴일 당직 또는 외출)
+ same => n,GotoIf($["${RESULT:0:11}" = "DUTY_DIRECT"]?duty_forward)
+ same => n,GotoIf($["${RESULT:0:13}" = "MOBILE_DIRECT"]?mobile_forward)
+
+ ; 3. 사무실 우선 하이브리드 (MicroSIP -> 휴대폰)
+ same => n,GotoIf($["${RESULT:0:9}" = "OFF_FIRST"]?office_first)
+
+ ; 기본값 (앱 호출)
+ same => n,Dial(PJSIP/${EXTEN},15,c)
+ same => n,Hangup()
+
+ ; [동작 상세]
+ same => n(office_first),Set(INT_NO=${CUT(RESULT,:,2)})
+  same => n,Set(MOB_NO=${CUT(RESULT,:,3)})
+  same => n,Dial(PJSIP/${INT_NO},15,c)
+  same => n,GotoIf($["${DIALSTATUS}" != "ANSWER"]?mobile_forward_logic)
+  same => n,Hangup()
+
+ same => n(mobile_forward_logic),NoOp(### REDIRECTING TO MOBILE ###)
+  same => n,Dial(${OFFICE_TRUNK}/sip:${MOB_NO}@crm-bank-erp.pstn.tokyo.twilio.com,30,c)
+  same => n,Hangup()
+
+ same => n(mobile_forward),Set(MOB_NO=${CUT(RESULT,:,2)})
+  same => n,Dial(${OFFICE_TRUNK}/sip:${MOB_NO}@crm-bank-erp.pstn.tokyo.twilio.com,40,c)
+  same => n,Hangup()
+
+ same => n(duty_forward),Set(DUTY_NO=${CUT(RESULT,:,2)})
+  same => n,Dial(${OFFICE_TRUNK}/sip:${DUTY_NO}@crm-bank-erp.pstn.tokyo.twilio.com,40,c)
+  same => n,Hangup()
+
+ same => n(blocked),Playback(ss-noservice)
+  same => n,Hangup()
+
+[incoming-main]
+; 🚀 [상용] 컴퓨터 유통/제조 전문 ARS 시나리오
+exten => s,1,NoOp(### MAIN INBOUND ENTRY ###)
+ same => n,Answer()
+ same => n,Set(REC_FILE=${STRFTIME(${EPOCH},,%Y%m%d-%H%M%S)}-${CALLERID(num)}-INBOUND-${UNIQUEID}.wav)
+ same => n,MixMonitor(${REC_FILE})
+
+ ; 인사말 및 메뉴 선택 (고품질 음원 필요)
+ same => n,Background(custom/01_welcome) ; "반갑습니다. 혁신기술 [회사명]입니다..."
+ same => n,WaitExten(5)
+
+ ; 1번: 영업/견적 (내선 101로 연결)
+ exten => 1,1,Goto(intelligent-router,101,1)
+
+ ; 2번: 기술지원/AS (내선 103으로 연결)
+ exten => 2,1,Goto(intelligent-router,103,1)
+
+ ; 4번: 콜백 접수 (음성 메시지 녹음 후 API 전송)
+ exten => 4,1,NoOp(### CALLBACK REQUESTED ###)
+  same => n,Playback(custom/05_callback) ; "연락처를 남기시려면 성함과 용건을 말씀해 주세요..."
+  same => n,Record(/var/lib/asterisk/sounds/custom/cb-${UNIQUEID}.wav,3,30)
+  same => n,System(curl -X POST ${ERP_API}/log-callback -H "Content-Type: application/json" -d '{"interaction_id":"${UNIQUEID}", "keyword":"${CALLERID(num)}", "media_type":"callback", "cmpycd":"COIT"}')
+  same => n,Playback(custom/06_thank_you_bye)
+  same => n,Hangup()
+
+[haion-outbound]
+exten => _X.,1,NoOp(### OUTBOUND CALL ###)
+ same => n,Set(REC_FILE=${STRFTIME(${EPOCH},,%Y%m%d-%H%M%S)}-${CALLERID(num)}-OUT-${EXTEN}.wav)
+ same => n,MixMonitor(${REC_FILE})
+ same => n,Set(CALLERID(all)="CRM Bank" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${IF($["${EXTEN:0:1}"="0"]?+82${EXTEN:1}:${EXTEN})}@crm-bank-erp.pstn.tokyo.twilio.com,60,c)
+ same => n,Hangup()
+
+exten => h,1,StopMixMonitor()
+ same => n,Hangup()

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.crmbank.erp.comm.mapper.CommMapper">
+
+    <select id="HABA_935U_STR" resultType="map">
+        exec haba_935u_str #{actkind}, #{cmpycd}, #{usergrp}, #{upmucd}, #{grpcd}, #{pgmid}, #{useyn}, #{mypgm}, #{userid}
+    </select>
+
+    <select id="HABA_100U_STR" resultType="map">
+        EXEC HABA_100U_STR #{actkind}, #{cmpycd}, #{clsymd}, #{gline1}, #{gline2}, #{gline3}, #{gline4}, #{gline5},
+        #{bgtype}, #{stkgbn}, #{mnfyn}, #{stokyn}, #{slipyn}, #{pricegbn}, #{cardcust}, #{logoimg}, #{stampimg},
+        #{yeosinyn}, #{iocnfmyn}, #{outacctyn}, #{updemp}
+    </select>
+
+    <select id="HABA_030U_STR" resultType="map">
+        exec haba_030u_str
+            #{actkind}, #{cmpycd}, #{unitcd}, #{unitnm}, #{saupno}, #{bossnm},
+            #{legalno}, #{postno}, #{address}, #{uptae}, #{upjong}, #{telno},
+            #{faxno}, #{dspord}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HAAA_800U_STR" resultType="map">
+        exec haaa_800u_str #{actkind}, #{pgmid}, #{pgmnm}, #{upmucd}, #{grpcd}, #{grpnm}, #{dspord}, #{useyn}, #{userid}
+    </select>
+    <select id="HAAA_810U_STR" resultType="map">
+        exec haaa_810u_str #{actkind}, #{upmucd}, #{grpcd}, #{grpnm}, #{dspord}, #{useyn}, #{userid}
+    </select>
+    <select id="HABA_920U_STR" resultType="map">
+        exec haba_920u_str #{actkind}, #{cmpycd}, #{userid}, #{pw}, #{usernm},
+            #{telno},   #{inner_no}, #{hpno},      #{deptcd},      #{empno},
+            #{sdeptcd}, #{positionoff}, #{usergrp}, #{email},      #{pricegbn},
+            #{useyn},   #{salsyn}, #{userid}
+    </select>
+    <select id="HABA_900U_STR" resultType="map">
+        exec haba_900u_str #{actkind}, #{cmpycd}, #{ltdnm}, #{ltdenm}, #{saupno}, #{bossnm}, #{legalno}, #{postno}, #{address}, #{uptae}, #{upjong}, #{telno}, #{fondymd}, #{clsmm}, #{domain}, #{useyn}, #{userid}
+    </select>
+    <select id="HABA_910U_STR" resultType="map">
+        exec haba_910u_str #{actkind}, #{cmpycd}, #{userid}, #{usernm}, #{deptcd}, #{deptnm},
+        #{pw}, #{telno}, #{hpno}, #{email}, #{useyn}, #{userid}, #{pricegbn}
+    </select>
+    <select id="HABA_060U_STR" resultType="map">
+        exec haba_060u_str #{actkind}, #{cmpycd}, #{deptcd}, #{deptnm}, #{deptsnm}, #{deptenm}, #{updept}, #{deptdum}, #{deptemp}, #{deptopn}, #{deptcld}, #{taxunit}, #{costgbn}, #{dspord}, #{useyn}, #{userid}
+    </select>
+    <select id="HAAA_010U_STR" resultType="map">
+        exec haaa_010u_str #{actkind}, #{cdtype}, #{codecd}, #{codenm}, #{dspord}, #{remark}, #{useyn}, #{userid}
+    </select>
+
+    <!-- LEFT MENU 처리 -->
+    <select id="HA00_200S_STR" resultType="map">
+        exec ha00_200s_str #{cmpycd}, #{userid}, #{upmucd}, #{usergrp}
+    </select>
+
+    <select id="GET_TOP_MENU_LIST" resultType="map">
+        select codecd, codenm from haba900t_tbl where cdtype = '320' and useyn = 'Y' order by dspord
+    </select>
+
+    <select id="GET_TOP_MENU_MOBILE_LIST" resultType="map">
+        select codecd, codenm from haba900t_tbl where cdtype = '320' and updyn = 'Y' order by dspord
+    </select>
+
+    <select id="GET_PROGRAM_LIST" resultType="map">
+        SELECT A.pgmid, A.pgmnm,
+               CASE WHEN B.progid IS NOT NULL THEN 'Y' ELSE 'N' END as regyn
+        FROM haaa800t_tbl A
+        LEFT JOIN COM_MANUAL B ON REPLACE(A.pgmid, '_', '') = B.progid
+        WHERE A.useyn = 'y'
+        <if test="pgmnm != null and pgmnm != ''">
+            AND A.pgmnm LIKE '%' + #{pgmnm} + '%'
+        </if>
+        ORDER BY A.pgmid
+    </select>
+    <select id="GET_COMPANY_INFO" resultType="map">
+        exec haba_900u_str 'S0', #{cmpycd}
+    </select>
+
+    <select id="GET_USER_INFO" resultType="map">
+        exec ha00_010s_str #{cmpycd}, 'U0', '', #{userid}
+    </select>
+    <insert id="INSERT_LOGIN_HISTORY">
+        insert into haba970t_tbl (cmpycd, userid, addtime, iogbn, ip) values (#{cmpycd}, #{userid}, getdate(), #{iogbn}, #{ip})
+    </insert>
+    <delete id="DELETE_USER_CONN">
+        delete from haba980t_tbl where cmpycd = #{cmpycd} and userid = #{userid}
+    </delete>
+</mapper>

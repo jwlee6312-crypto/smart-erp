@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.crmbank.erp.haaa.mapper.HaaaMapper">
+
+    <select id="HAAA_010U_STR" resultType="java.util.LinkedHashMap">
+        exec haaa_010u_str #{actkind}, #{cdtype}, #{codecd}, #{codenm}, #{dspord}, #{remark}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HAAA_800U_STR" resultType="java.util.LinkedHashMap">
+        exec haaa_800u_str #{actkind}, #{pgmid}, #{pgmnm}, #{upmucd}, #{grpcd}, #{dspord}, #{useyn}, #{pgmid_o}, #{userid}
+    </select>
+
+    <select id="HAAA_810U_STR" resultType="java.util.LinkedHashMap">
+        exec haaa_810u_str #{actkind}, #{upmucd}, #{grpcd}, #{grpnm}, #{dspord}, #{useyn}, #{userid}
+    </select>
+
+</mapper>

@@ -1,0 +1,27 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+
+[from-internal]
+; --- 기초 강화: 종료 신호 동기화 및 노이즈 필터링 ---
+exten => _X.,1,NoOp(### CALL INITIATED: ${CALLERID(num)} -> ${EXTEN} ###)
+ same => n,Set(JITTERBUFFER(fixed)=default)
+ same => n,Dial(PJSIP/${EXTEN},30,c) ; 'c' 옵션은 상대방이 끊을 때 즉시 채널을 정리합니다.
+ same => n,Hangup()
+
+; 통화 종료 시 강제 채널 파괴 (어떤 경우에도 찌꺼기가 남지 않게 함)
+exten => h,1,NoOp(### CALL TERMINATED - HANGING UP ALL SESSIONS ###)
+ same => n,Hangup()
+
+[incoming-main]
+exten => _X.,1,NoOp(### INBOUND CALL FROM TWILIO ###)
+ same => n,Set(JITTERBUFFER(fixed)=default)
+ same => n,Dial(PJSIP/103,30,c)
+ same => n,Hangup()
+
+[haion-outbound]
+exten => _X.,1,NoOp(### OUTBOUND CALL via TWILIO ###)
+ same => n,Set(JITTERBUFFER(fixed)=default)
+ same => n,Set(CALLERID(all)="CRM Bank" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${IF($[${EXTEN:0:1}=0]?+82${EXTEN:1}:${EXTEN})}@crm-bank-erp.pstn.tokyo.twilio.com,60,c)
+ same => n,Hangup()

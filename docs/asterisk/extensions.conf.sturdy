@@ -1,0 +1,41 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+
+[from-internal]
+; --- 모든 전화에 대해 지터버퍼(소음 방지) 및 로그 기록 ---
+exten => _X.,1,NoOp(### CALL: ${CALLERID(num)} -> ${EXTEN} ###)
+ same => n,Set(JITTERBUFFER(adaptive)=default)
+ same => n,Goto(internal-logic,${EXTEN},1)
+
+[internal-logic]
+; 600 에코 테스트 (자기 목소리 듣기)
+exten => 600,1,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+
+; 내선 통화 (101-199) - 기초 튼튼 로직
+exten => _1XX,1,Dial(PJSIP/${EXTEN},20)
+ same => n,GotoIf($["${DIALSTATUS}" = "BUSY"]?busy)
+ same => n,GotoIf($["${DIALSTATUS}" = "CONGESTION"]?unavailable)
+ same => n,GotoIf($["${DIALSTATUS}" = "CHANUNAVAIL"]?unavailable)
+ same => n,Playback(vm-nobodyavail) ; 아무도 받을 수 없을 때 안내
+ same => n,Hangup()
+
+ same => n(busy),Playback(vm-isonphone) ; 통화 중일 때 안내
+ same => n,Hangup()
+
+ same => n(unavailable),Playback(ss-noservice) ; 오프라인일 때 안내 (로그인 안됨)
+ same => n,Hangup()
+
+[incoming-main]
+exten => _X.,1,NoOp(### Inbound Call ###)
+ same => n,Answer()
+ same => n,Dial(PJSIP/103,30)
+ same => n,Hangup()
+
+[haion-outbound]
+exten => _X.,1,NoOp(### Outbound Call ###)
+ same => n,Set(CALLERID(all)="CRM Bank" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${IF($[${EXTEN:0:1}=0]?+82${EXTEN:1}:${EXTEN})}@crm-bank-erp.pstn.tokyo.twilio.com,60)
+ same => n,Hangup()

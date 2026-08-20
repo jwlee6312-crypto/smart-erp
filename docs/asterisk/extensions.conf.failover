@@ -1,0 +1,31 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+MY_CELL_PHONE=+821032043901 ; 사용자님의 실제 핸드폰 번호
+
+[from-internal]
+exten => _X.,1,NoOp(### Incoming Call to ${EXTEN} ###)
+ same => n,Set(JITTERBUFFER(adaptive)=default)
+ same => n,Goto(internal-logic,${EXTEN},1)
+
+[internal-logic]
+; 103번(앱) 호출 시나리오
+exten => 103,1,NoOp(### Calling App 103 ###)
+ same => n,Dial(PJSIP/103,15) ; 15초 동안 앱에 신호를 보냄
+ same => n,GotoIf($["${DIALSTATUS}" != "ANSWER"]?fallback_to_cell) ; 안 받으면 실제 번호로!
+ same => n,Hangup()
+
+ same => n(fallback_to_cell),NoOp(### App Offline - Calling Cell Phone ###)
+ same => n,Playback(followme/pls-wait-connect) ; "잠시만 기다려주세요" 안내
+ same => n,Set(CALLERID(all)="CRM Fallback" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${MY_CELL_PHONE}@crm-bank-erp.pstn.tokyo.twilio.com,30)
+ same => n,Hangup()
+
+; 나머지 1XX 번호
+exten => _1XX,1,Dial(PJSIP/${EXTEN},20)
+ same => n,Hangup()
+
+[incoming-main]
+exten => _X.,1,NoOp(### Inbound Call From Outside ###)
+ same => n,Answer()
+ same => n,Goto(internal-logic,103,1) ; 외부 전화를 103번 로직(앱->실제폰)으로 연결

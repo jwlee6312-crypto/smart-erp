@@ -1,0 +1,40 @@
+# Java / Gradle
+build/
+bin/
+out/
+.gradle/
+*.jar
+*.war
+
+# Node.js / Frontend
+node_modules/
+dist/
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# GitHub Runner & Work
+_work/
+
+# 모바일 및 대용량 (전부 차단)
+net.haion.erp.mobile/
+erp-mobileback-260120/
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
+*.bak
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Deployment
+/tmp/
+*.log

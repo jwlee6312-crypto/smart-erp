@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.crmbank.erp.asterisk.mapper.AsteriskMapper">
+
+    <!-- 1. 내선번호 (PJSIP) 조회 -->
+    <select id="selectPjsipList" parameterType="map" resultType="map">
+        select a.id as id, b.password as password, c.max_contacts as max_contacts,
+               a.context as context, a.transport as transport, a.allow as allow,
+               coalesce(a.record_yn, 'y') as record_yn, b.username as callerid,
+               a.mobile_no as mobile_no, a.routing_mode as routing_mode,
+               a.status as status, a.duty_yn as duty_yn
+        from asterisk.ps_endpoints a
+        left join asterisk.ps_auths b on a.id = b.id
+        left join asterisk.ps_aors c on a.id = c.id
+        where 1=1
+        <if test="id != null and id != ''"> and a.id like concat('%', #{id}, '%') </if>
+    </select>
+
+    <!-- 2. 수신그룹 (Queue) 조회 -->
+    <select id="selectQueueList" parameterType="map" resultType="map">
+        select name as name, musiconhold as musiconhold, strategy as strategy,
+               timeout as timeout, ringinuse as ringinuse, context as context,
+               failover_dest as failover_dest
+        from asterisk.queues
+        where 1=1
+        <if test="name != null and name != ''"> and name like concat('%', #{name}, '%') </if>
+    </select>
+
+    <!-- 3. 수신그룹 멤버 조회 -->
+    <select id="selectQueueMemberList" parameterType="string" resultType="map">
+        select replace(interface, 'pjsip/', '') as interface_no, membername as membername,
+               penalty as penalty, paused as paused, wrapuptime as wrapuptime
+        from asterisk.queue_members
+        where queue_name = #{queue_name}
+    </select>
+
+    <!-- 4. 다이얼플랜 (Extensions) 조회 -->
+    <select id="selectExtensions" parameterType="map" resultType="map">
+        select context as context, exten as exten, priority as priority, app as app, appdata as appdata
+        from asterisk.extensions
+        where 1=1
+        <if test="context != null and context != ''"> and context like concat('%', #{context}, '%') </if>
+        <if test="exten != null and exten != ''"> and exten like concat('%', #{exten}, '%') </if>
+    </select>
+
+    <!-- 저장/삭제 -->
+    <insert id="insertPjsipAuth">
+        insert into asterisk.ps_auths (id, auth_type, password, username)
+        values (#{id}, 'userpass', #{password}, #{id}) on duplicate key update password = #{password}
+    </insert>
+    <insert id="insertPjsipAor">
+        insert into asterisk.ps_aors (id, max_contacts, remove_existing)
+        values (#{id}, coalesce(#{max_contacts}, 1), 'yes') on duplicate key update max_contacts = coalesce(#{max_contacts}, 1)
+    </insert>
+    <insert id="insertPjsipEndpoint">
+        insert into asterisk.ps_endpoints (id, transport, aors, auth, context, disallow, allow, record_yn, callerid,
+                                           force_rport, rewrite_contact, rtp_symmetric, direct_media, rtp_timeout, timers,
+                                           mobile_no, routing_mode, status, duty_yn)
+        values (#{id}, #{transport}, #{id}, #{id}, #{context}, 'all', #{allow}, coalesce(#{record_yn}, 'y'), #{callerid},
+                'yes', 'yes', 'yes', 'no', 20, 'yes',
+                #{mobile_no}, coalesce(#{routing_mode}, '10'), coalesce(#{status}, '10'), coalesce(#{duty_yn}, 'N'))
+        on duplicate key update transport = #{transport}, context = #{context}, allow = #{allow},
+                                record_yn = coalesce(#{record_yn}, 'y'), callerid = #{callerid},
+                                mobile_no = #{mobile_no}, routing_mode = coalesce(#{routing_mode}, '10'),
+                                status = coalesce(#{status}, '10'), duty_yn = coalesce(#{duty_yn}, 'N'),
+                                force_rport='yes', rewrite_contact='yes', rtp_symmetric='yes', direct_media='no', rtp_timeout=20, timers='yes'
+    </insert>
+    <delete id="deletePjsip">
+        delete from asterisk.ps_endpoints where id = #{id};
+        delete from asterisk.ps_auths where id = #{id};
+        delete from asterisk.ps_aors where id = #{id};
+    </delete>
+    <insert id="upsertQueue">
+        insert into asterisk.queues (name, musiconhold, strategy, timeout, ringinuse, context, failover_dest)
+        values (#{name}, coalesce(#{musiconhold}, 'default'), #{strategy}, #{timeout}, #{ringinuse}, #{context}, #{failover_dest})
+        on duplicate key update musiconhold = coalesce(#{musiconhold}, 'default'), strategy = #{strategy},
+                                timeout = #{timeout}, failover_dest = #{failover_dest}
+    </insert>
+    <delete id="deleteQueue">
+        delete from asterisk.queues where name = #{name}
+    </delete>
+    <delete id="deleteQueueMembers">
+        delete from asterisk.queue_members where queue_name = #{queue_name}
+    </delete>
+    <insert id="insertQueueMember">
+        insert into asterisk.queue_members (queue_name, interface, membername, penalty, paused, wrapuptime)
+        values (#{queue_name}, concat('pjsip/', #{interface_no}), #{membername}, #{penalty}, #{paused}, #{wrapuptime})
+    </insert>
+    <insert id="insertExtension">
+        insert into asterisk.extensions (context, exten, priority, app, appdata)
+        values (#{context}, #{exten}, #{priority}, #{app}, #{appdata})
+    </insert>
+    <delete id="deleteExtensions">
+        delete from asterisk.extensions where context = #{context} and exten = #{exten}
+    </delete>
+
+    <!-- 5. ARS 스크립트 관리 -->
+    <select id="selectArsScripts" parameterType="map" resultType="map">
+        SELECT id, description, script_text, upd_user, upd_dtime
+        FROM asterisk.ars_scripts
+        WHERE 1=1
+        <if test="id != null and id != ''"> AND id LIKE CONCAT('%', #{id}, '%') </if>
+        ORDER BY id ASC
+    </select>
+
+    <insert id="upsertArsScript">
+        INSERT INTO asterisk.ars_scripts (id, description, script_text, upd_user)
+        VALUES (#{id}, #{description}, #{script_text}, #{upd_user})
+        ON DUPLICATE KEY UPDATE script_text = #{script_text}, description = #{description}, upd_user = #{upd_user}
+    </insert>
+</mapper>

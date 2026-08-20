@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.crmbank.erp.hsba.mapper.HsbaMapper">
+
+    <select id="HSBA_010U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_010u_str
+            #{actkind}, #{cmpycd}, #{itemcd}, #{itsize}, #{unit}, #{itemnm}, #{itemenm},
+            #{inunit}, #{icqty}, #{outunit}, #{ocqty}, #{setyn}, #{astkind},  #{agrpcd}, #{bgrpcd},
+            #{imprice}, #{omprice}, #{stock}, #{qtypnt}, #{vatyn}, #{sotaxyn}, #{udogyn},
+            #{barcode}, #{hscode}, #{remark}, #{useyn}, #{in_custcd}, #{updemp}
+    </select>
+
+    <select id="HSBA_020U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_020u_str #{actkind}, #{cmpycd}, #{astkind}, #{agrpcd}, #{agrpnm}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HSBA_030U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_030u_str #{actkind}, #{cmpycd}, #{astkind}, #{agrpcd}, #{bgrpcd}, #{agrpnm}, #{bgrpnm}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HSBA_040U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_040u_str #{actkind}, #{cmpycd}, #{unit}, #{unitnm}, #{remark}, #{dspord}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HSBA_050U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_050u_str #{actkind}, #{cmpycd}, #{whcd}, #{whnm}, #{remark}, #{dspord}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HSBA_060U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_060u_str #{actkind}, #{cmpycd}, #{iogbn}, #{itemcd}, #{prcgbn}, #{price}, #{stdyn}, #{remark}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HSBA_070U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_070u_str
+            #{actkind}, #{cmpycd}, #{custcd}, #{custno}, #{custnm}, #{custgbn}, #{bossnm},
+            #{juminno}, #{legalno}, #{custkind}, #{custtype}, #{telno}, #{faxno}, #{postno},
+            #{address}, #{d_address}, #{iogbn}, #{inprcgbn}, #{outprcgbn}, #{hdamt}, #{rcvdd},
+            #{agrpcd}, #{bgrpcd}, #{cgrpcd}, #{area}, #{cdamdang}, #{ctelno}, #{cemail}, #{remark},
+            #{status}, #{banknm}, #{gujoa}, #{fndymd}, #{stdymd}, #{clsymd}, #{singrd},
+            #{elcyn}, #{useyn}, #{updemp}, #{gigbcd}, #{outcustcd}
+    </select>
+
+    <select id="HSBA_065U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_065u_str #{actkind}, #{cmpycd}, #{astkind}, #{itemcd}, #{itemnm}, #{price},
+        #{custcd}, #{remark}, #{autoyn}, #{selgbn}, #{updemp}
+    </select>
+
+    <select id="HSBA_090U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_090u_str #{actkind}, #{cmpycd}, #{custcd}, #{custno}, #{custnm}, #{custgbn}, #{bossnm},
+        #{juminno}, #{legalno}, #{custkind}, #{custtype}, #{telno}, #{faxno}, #{postno},
+        #{address}, #{d_address}, #{iogbn}, #{inprcgbn}, #{outprcgbn}, #{hdamt}, #{rcvdd}, #{agrpcd},
+        #{bgrpcd}, #{cgrpcd}, #{area}, #{cdamdang}, #{ctelno}, #{cemail}, #{remark},
+        #{status}, #{banknm}, #{gujoa}, #{fndymd}, #{stdymd}, #{clsymd}, #{singrd},
+        #{elcyn}, #{useyn}, #{updemp}, #{gigbcd}
+    </select>
+
+    <select id="HSBA_140U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_140u_str #{actkind}, #{cmpycd}, #{iogbn}, #{custcd},#{nacd},#{shipport},
+        #{arvport},#{currcd},#{paycond},#{pricond},#{useyn}, #{updemp}
+    </select>
+
+    <select id="HSBA_130U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_130u_str #{actkind}, #{cmpycd}, #{custcd}, #{custnm}, #{trancd}, #{area},
+        #{postno}, #{address}, #{damdang}, #{telno}, #{email}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HSBA_170U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_170u_str #{actkind}, #{cmpycd}, #{custcd}, #{custnm}, #{rowno}, #{damkind}, #{damgbn},
+        #{damyeo}, #{dammgt}, #{damsel}, #{samhan}, #{rcvdd}, #{fromdt}, #{todt}, #{sounm}, #{bigo}, #{useyn}, #{updemp}
+     </select>
+
+    <select id="HSBA_190U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_190u_str #{actkind}, #{cmpycd}, #{custcd}, #{custnm}, #{rowno}, #{deptnm},
+        #{damdang}, #{telno}, #{email}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HSBA_280U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_280u_str #{actkind}, #{cmpycd}, #{iogbn}, #{custcd},#{nacd},#{shipport},
+        #{arvport},#{currcd},#{paycond},#{pricond},#{useyn}, #{updemp}
+    </select>
+
+    <!-- 재고자산 계정관리 (HSBA700U) -->
+    <select id="HSBA_700U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_700u_str
+            #{actkind}, #{cmpycd}, #{astkind}, #{astkindnm}, #{imacctcd},
+            #{ipacctcd}, #{ivacctcd}, #{omacctcd}, #{opacctcd}, #{ovacctcd}, #{userid}
+    </select>
+
+    <!-- 입금 계정관리 (HSBA710U) -->
+    <select id="HSBA_710U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_710u_str
+            #{actkind}, #{cmpycd}, #{imgbn}, #{imgbnnm}, #{dacctcd},
+            #{dacctnm}, #{cacctcd}, #{cacctnm}, #{userid}
+    </select>
+
+    <!-- 타계정 계정과목 등록 (HSBA720U) -->
+    <select id="HSBA_720U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_720u_str #{actkind}, #{cmpycd}, #{tatype}, #{dacctcd}, #{cacctcd}, #{userid}
+    </select>
+
+    <select id="HSBA_730U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_730u_str #{actkind}, #{cmpycd}, #{dacctcd}, #{cacctcd},
+        #{ddacctcd}, #{dcacctcd}, #{updemp}
+    </select>
+
+    <select id="HSBA_750U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_750u_str #{actkind}, #{cmpycd}, #{costcd}, #{costnm}, #{costgbn},
+        #{divcd}, #{bigo}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HSBA_740U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_740u_str #{actkind}, #{cmpycd}, #{paygbn}, #{paygbnnm}, #{dacctcd},
+        #{dacctnm}, #{cacctcd}, #{cacctnm}, #{updemp}
+    </select>
+
+    <!-- 재고자산 계정관리 상세 -->
+    <select id="HSBA_701U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_701u_str #{actkind}, #{cmpycd}, #{slipkind}, #{seq}, #{astkind}, #{acctcd1},
+        #{acctcd2}, #{vacctcd}, #{acctnm1}, #{acctnm2}, #{vacctnm}, #{updemp}
+    </select>
+
+    <!-- 입금 계정관리 - 외부회계연동 -->
+    <select id="HSBA_711U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_711u_str #{actkind}, #{cmpycd}, #{imgbn}, #{imgbnnm}, #{dacctcd}, #{dacctnm},
+        #{cacctcd}, #{cacctnm}, #{updemp}
+    </select>
+
+    <!-- 타계정 유형별 계정관리 - 외부회계연동 -->
+    <select id="HSBA_721U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_721u_str #{actkind}, #{cmpycd}, #{tatype}, #{dacctcd}, #{dacctnm},
+        #{cacctcd}, #{cacctnm}, #{updemp}
+    </select>
+
+    <!-- 기말재고 등록 -->
+    <select id="HSBA_800U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_800u_str #{actkind}, #{cmpycd}, #{ym}, #{itemcd}, #{qty}, #{amt}, #{updemp}
+    </select>
+
+    <!-- 창고재고 등록 -->
+    <select id="HSBA_810U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_810u_str #{actkind}, #{cmpycd}, #{ym}, #{whcd}, #{itemcd}, #{qty}, #{updemp}
+    </select>
+
+    <!-- 거래처 미수금 등록 -->
+    <select id="HSBA_820U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_820u_str #{actkind}, #{cmpycd}, #{ym}, #{deptcd}, #{custcd}, #{amt}, #{updemp}
+    </select>
+
+    <!-- 거래처 미지급금 등록 -->
+    <select id="HSBA_830U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_830u_str #{actkind}, #{cmpycd}, #{ym}, #{custcd}, #{amt}, #{updemp}
+    </select>
+
+    <select id="HSBA_900U_STR" resultType="java.util.LinkedHashMap">
+        exec hsba_900u_str #{actkind}, #{cmpycd}, #{cdgbn}, #{code}, #{cdnm}, #{remark}, #{dspord}, #{useyn}, #{updemp}
+    </select>
+
+</mapper>

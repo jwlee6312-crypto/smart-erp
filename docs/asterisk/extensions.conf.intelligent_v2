@@ -1,0 +1,72 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+API_URL=http://172.19.192.1:8080/crm/inbound/asterisk/check-routing
+
+[from-internal]
+; --- 전역 전처리 (소음 방지 및 로그) ---
+exten => _X.,1,NoOp(### NEW CALL: ${CALLERID(num)} -> ${EXTEN} ###)
+ same => n,Set(JITTERBUFFER(fixed)=default)
+ same => n,Goto(intelligent-router,${EXTEN},1)
+
+[intelligent-router]
+; 600: 에코 테스트
+exten => 600,1,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+
+; 지능형 라우팅 엔진
+exten => _X.,1,NoOp(### ANALYZING ROUTING FOR ${EXTEN} ###)
+ same => n,Set(RESULT=${CURL(${API_URL}?exten=${EXTEN})})
+ same => n,NoOp(### API RESULT: ${RESULT} ###)
+
+ ; 1. 차단 및 휴가 처리
+ same => n,GotoIf($["${RESULT:0:5}" = "BLOCK"]?blocked)
+
+ ; 2. 즉시 리다이렉트 (야간/휴일 당직 또는 외출/휴대폰전용)
+ same => n,GotoIf($["${RESULT:0:11}" = "DUTY_DIRECT"]?duty_forward)
+ same => n,GotoIf($["${RESULT:0:13}" = "MOBILE_DIRECT"]?mobile_forward)
+
+ ; 3. 사무실 우선 하이브리드 (MicroSIP -> 휴대폰)
+ same => n,GotoIf($["${RESULT:0:12}" = "OFF_FIRST"]?office_first)
+
+ ; 기본값 (예외 상황)
+ same => n,Dial(PJSIP/${EXTEN},15,c)
+ same => n,Hangup()
+
+ ; [동작 상세]
+ same => n(office_first),Set(INT_NO=${CUT(RESULT,:,2)})
+  same => n,Set(MOB_NO=${CUT(RESULT,:,3)})
+  same => n,Dial(PJSIP/${INT_NO},15,c) ; 사무실(MicroSIP)로 15초 호출
+  same => n,GotoIf($["${DIALSTATUS}" = "ANSWER"]?end)
+  same => n,NoOp(### OFFICE UNANSWERED - FALLBACK TO MOBILE: ${MOB_NO} ###)
+  same => n,Dial(${OFFICE_TRUNK}/sip:${MOB_NO}@crm-bank-erp.pstn.tokyo.twilio.com,30,c)
+  same => n,Hangup()
+
+ same => n(mobile_forward),Set(MOB_NO=${CUT(RESULT,:,2)})
+  same => n,Dial(${OFFICE_TRUNK}/sip:${MOB_NO}@crm-bank-erp.pstn.tokyo.twilio.com,40,c)
+  same => n,Hangup()
+
+ same => n(duty_forward),Set(DUTY_NO=${CUT(RESULT,:,2)})
+  same => n,Playback(followme/pls-wait-connect) ; 안내 멘트
+  same => n,Dial(${OFFICE_TRUNK}/sip:${DUTY_NO}@crm-bank-erp.pstn.tokyo.twilio.com,40,c)
+  same => n,Hangup()
+
+ same => n(blocked),Playback(ss-noservice)
+  same => n,Hangup()
+
+ same => n(end),Hangup()
+
+[incoming-main]
+exten => s,1,NoOp(### MAIN INBOUND ENTRY ###)
+ same => n,Answer()
+ ; 부서 선택 메뉴 시뮬레이션 (현재는 103번으로 직결 테스트)
+ same => n,Goto(intelligent-router,103,1)
+
+[haion-outbound]
+exten => _X.,1,NoOp(### OUTBOUND CALL ###)
+ same => n,Set(CALLERID(all)="CRM Bank" <${MY_TWILIO_NUM}>)
+ same => n,Dial(${OFFICE_TRUNK}/sip:${IF($[${EXTEN:0:1}=0]?+82${EXTEN:1}:${EXTEN})}@crm-bank-erp.pstn.tokyo.twilio.com,60,c)
+ same => n,Hangup()
+
+exten => h,1,Hangup()

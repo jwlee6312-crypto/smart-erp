@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.crmbank.erp.haba.mapper.HabaMapper">
+
+    <select id="HABA_YYYY_S" resultType="java.util.LinkedHashMap">
+        SELECT DISTINCT YYYY FROM HABA810T_TBL WHERE CMPYCD = #{cmpycd} ORDER BY YYYY DESC
+    </select>
+
+    <select id="HABA_010U_STR" resultType="java.util.LinkedHashMap">
+        exec haba_010u_str #{actkind}, #{cmpycd}, #{gubun}, #{acctcd}, #{acctnm},
+        #{upacct}, #{typedc}, #{slipyn}, #{typeacct}, #{typesub}, #{typemgt},
+        #{typecrs}, #{bugtcd}, #{profyn}, #{frgnyn}, #{typeect}, #{useyn}, #{keyword}, #{updemp}
+    </select>
+
+    <select id="HABA_020U_STR" resultType="java.util.LinkedHashMap">
+        DECLARE @v_yyyy VARCHAR(4) = #{yyyy};
+        IF ISNULL(@v_yyyy, '') = ''
+        SELECT @v_yyyy = ISNULL(MAX(YYYY), '0000') FROM HABA810T_TBL WHERE CMPYCD = #{cmpycd};
+
+        exec haba_020u_str #{actkind}, #{cmpycd}, @v_yyyy, #{gubun}, #{upacct},
+        #{acctnm}, #{dbcr}, #{actgbn}, #{dspord}, #{dsprl}, #{rstyn}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_021U_STR" resultType="java.util.LinkedHashMap">
+        DECLARE @v_yyyy VARCHAR(4) = #{yyyy};
+        IF ISNULL(@v_yyyy, '') = ''
+        SELECT @v_yyyy = ISNULL(MAX(YYYY), '0000') FROM HABA810T_TBL WHERE CMPYCD = #{cmpycd};
+
+        exec haba_021u_str #{actkind}, #{cmpycd}, @v_yyyy, #{gubun}, #{upacct},
+        #{arowno}, #{acctcd}, #{caltype}, #{calgagam}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_022U_STR" resultType="java.util.LinkedHashMap">
+        DECLARE @v_yyyy VARCHAR(4) = #{yyyy};
+        IF ISNULL(@v_yyyy, '') = ''
+        SELECT @v_yyyy = ISNULL(MAX(YYYY), '0000') FROM HABA810T_TBL WHERE CMPYCD = #{cmpycd};
+
+        exec haba_022u_str #{actkind}, #{cmpycd}, @v_yyyy, #{gubun}, #{upacct},
+        #{acctcd}, #{caltype}, #{calgagam}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_030U_STR" resultType="java.util.LinkedHashMap">
+        exec haba_030u_str #{actkind}, #{cmpycd}, #{unitcd}, #{unitnm}, #{saupno}, #{bossnm}, #{legalno},
+        #{postno}, #{address}, #{uptae}, #{upjong}, #{telno}, #{faxno}, #{dspord}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HABA_040U_STR" resultType="java.util.LinkedHashMap">
+        exec haba_040u_str #{actkind}, #{cmpycd}, #{subcd}, #{subnm}, #{bigo }, #{dspord},  #{useyn}, #{userid}
+    </select>
+
+    <select id="HABA_050U_STR" resultType="java.util.LinkedHashMap">
+        exec haba_050u_str #{actkind}, #{cmpycd}, #{bankcd}, #{banknm}, #{bigo }, #{dspord},  #{useyn}, #{userid}
+    </select>
+
+    <select id="HABA_060U_STR" resultType="java.util.LinkedHashMap">
+        exec haba_060u_str #{actkind}, #{cmpycd}, #{deptcd}, #{deptnm}, #{deptsnm}, #{deptenm}, #{updept}, #{deptdum},
+        #{deptemp}, #{deptopn}, #{deptcld}, #{taxunit}, #{costgbn}, #{dspord}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HABA_070U_STR" resultType="java.util.LinkedHashMap">
+        exec haba_070u_str #{actkind}, #{cmpycd}, #{prjcd}, #{prjnm}, #{fromdt}, #{todt}, #{bigo}, #{dspord}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HABA_080U_STR" resultType="java.util.LinkedHashMap">
+        exec haba_080u_str #{actkind}, #{cmpycd}, #{bugtcd}, #{bugtnm}, #{costtype}, #{bigo}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HABA_090U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_090U_STR #{actkind}, #{cmpycd}, #{mgtno}, #{mgtnm}, #{bigo},#{dspord},  #{useyn}, #{userid}
+    </select>
+
+    <select id="HABA_100U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_100U_STR #{actkind}, #{cmpycd}, #{clsymd}, #{gline1}, #{gline2}, #{gline3}, #{gline4}, #{gline5},
+        #{bgtype}, #{stkgbn}, #{mnfyn}, #{stokyn}, #{slipyn}, #{pricegbn}, #{cardcust}, #{logoimg}, #{stampimg},
+        #{yeosinyn}, #{iocnfmyn}, #{outacctyn}, #{updemp}
+    </select>
+
+    <select id="HABA_110U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_110U_STR #{actkind}, #{cmpycd}, #{acctcd}, #{gujano}, #{bankcd},#{stdymd},  #{endymd}, #{wonamt},
+        #{rate}, #{payamt}, #{paydd}, #{remark}, #{useyn},#{updemp}
+    </select>
+
+    <select id="HABA_120U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_120U_STR #{actkind}, #{cmpycd}, #{acctcd}, #{bondno}, #{bankcd},#{stdymd},  #{endymd}, #{puchqty},
+        #{issuamt}, #{puchamt}, #{rate}, #{bondkind}, #{useyn},#{remark},#{updemp}
+    </select>
+
+    <select id="HABA_130U_STR" resultType="java.util.LinkedHashMap">
+        exec haba_130u_str #{actkind}, #{cmpycd}, #{acctcd}, #{loanno}, #{bankcd},#{stdymd},  #{endymd}, #{loanamt},
+        #{rate}, #{remark}, #{useyn},#{updemp}
+    </select>
+
+    <select id="HABA_140U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_140U_STR #{actkind}, #{cmpycd}, #{cardno}, #{bankcd}, #{gujano},#{cardnm},  #{soname}, #{stdymd},
+        #{sndymd}, #{chkdd},#{remark}, #{useyn},#{updemp}
+    </select>
+
+    <select id="HABA_150U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_150U_STR #{actkind}, #{cmpycd}, #{billno}, #{billno_to}, #{billkind}, #{issubank},
+        #{issuman}, #{stdymd}, #{endymd}, #{billamt}, #{custcd}, #{budoyn}, #{billtype}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_160U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_160U_STR #{actkind}, #{cmpycd}, #{billgu}, #{billno}, #{billno_to}, #{issuman},
+        #{bankcd}, #{stdymd}, #{endymd}, #{billamt}, #{custcd}, #{billtype}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_170U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_170U_STR #{actkind}, #{cmpycd}, #{billgu}, #{billno}, #{billno_to}, #{issuman},
+        #{bankcd}, #{billcnt}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_180U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_180U_STR #{actkind}, #{cmpycd}, #{custcd}, #{custno}, #{custnm}, #{custgbn}, #{bossnm},
+        #{juminno}, #{legalno}, #{custkind}, #{custtype}, #{telno}, #{faxno}, #{postno}, #{address},
+        #{d_address}, #{iogbn}, #{fondymd}, #{stdymd}, #{clsymd}, #{singrd}, #{status}, #{gujoa}, #{banknm},
+        #{elcyn}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_190S_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_190S_STR #{cmpycd}, #{iogbn }, #{custnm}, #{bossnm}
+    </select>
+
+    <select id="HABA_210U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_210U_STR #{actkind}, #{cmpycd}, #{acctcd1}, #{acctcd2}, #{acctym},
+        #{mmgbn}, #{acctcd}, #{dbamt}, #{cramt}, #{acctnm}
+    </select>
+
+    <select id="HABA_220U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_220U_STR #{actkind}, #{cmpycd}, #{acctym}, #{mmgbn},
+        #{acctcd}, #{custcd}, #{custcd1}, #{custcd2}, #{dbamt}, #{cramt}, #{custnm}
+    </select>
+
+    <select id="HABA_230U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_230U_STR #{actkind}, #{cmpycd}, #{acctym}, #{mmgbn}, #{acctcd},
+        #{mgtno},#{mgtno1},#{mgtno2}, #{dbamt}, #{cramt}, #{mgtnm}
+    </select>
+
+    <select id="HABA_240U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_240U_STR  #{actkind}, #{cmpycd}, #{fromdt}, #{todt}, #{slipymd}, #{slipno}, #{srowno},
+        #{acctcd}, #{custcd}, #{upayamt}, #{payamt}, #{procamt}, #{paycndt}, #{reqymd}, #{remark}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_250U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_250U_STR #{actkind}, #{cmpycd}, #{fromdt}, #{todt}, #{slipymd}, #{slipno}, #{srowno},
+        #{acctcd}, #{custcd}, #{mgtno}, #{pubymd}, #{upayamt}, #{reqymd}, #{remark}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_260U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_260U_STR #{actkind}, #{cmpycd}, #{fromdt}, #{todt}, #{slipymd}, #{slipno}, #{srowno},
+        #{acctcd}, #{pubymd}, #{upayamt}, #{stdymd}, #{endymd}, #{remark}, #{useyn}, #{updemp}
+    </select>
+
+    <select id="HABA_510U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_510U_STR #{actkind}, #{cmpycd}, #{paygbn}, #{paygbnm}, #{acctcd}, #{acctnm}, #{updemp}
+    </select>
+
+    <select id="HABA_900U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_900U_STR #{actkind}, #{cmpycd}, #{ltdnm}, #{ltdenm}, #{saupno}, #{bossnm}, #{legalno}, #{postno}, #{address}, #{uptae}, #{upjong}, #{telno}, #{fondymd}, #{clsmm}, #{domain}, #{useyn}, #{userid}
+    </select>
+
+    <select id="HABA_910U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_910U_STR #{actkind}, #{cmpycd}, #{userid}, #{usernm}, #{deptcd}, #{deptnm},
+        #{pw}, #{telno}, #{hpno}, #{email}, #{useyn}, #{userid}, #{pricegbn}, #{photo_path}, #{inner_no}
+    </select>
+
+    <select id="HABA_920U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_920U_STR
+        #{actkind}, #{word},   #{cmpycd},   #{userid},      #{usernm},
+        #{deptcd},  #{deptnm}, #{empno},    #{salsyn},      #{pw},
+        #{telno},   #{hpno},   #{email},    #{sdept},       #{useyn},
+        #{usergrp}, #{updemp}, #{pricegbn}, #{positionoff}, #{inner_no}, #{photo_path}
+    </select>
+
+    <select id="HABA_935U_STR" resultType="java.util.LinkedHashMap">
+        EXEC HABA_935U_STR #{actkind},
+        #{cmpycd},
+        #{usergrp},
+        #{upmucd},
+        #{grpcd},
+        #{pgmid},
+        #{pgmnm},
+        #{useyn},
+        #{mypgm}, #{dspord}, #{userid}
+    </select>
+
+</mapper>

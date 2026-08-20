@@ -1,0 +1,17 @@
+[globals]
+OFFICE_TRUNK=PJSIP/twilio-trunk
+MY_TWILIO_NUM=+12345163374
+
+[from-internal]
+; 모든 통화 시도에 대해 즉시 응답 및 채널 감시
+exten => _X.,1,NoOp(### CALL START: ${CALLERID(num)} -> ${EXTEN} ###)
+ same => n,Dial(PJSIP/${EXTEN},30,c) ; 'c' 옵션: 한쪽이 끊으면 즉시 취소 신호 전달
+ same => n,Hangup()
+
+; 통화가 종료되었을 때 실행되는 강제 종료 핸들러
+exten => h,1,NoOp(### CALL ENDED - CLEANING UP ALL CHANNELS ###)
+ same => n,Hangup()
+
+[incoming-main]
+exten => _X.,1,Dial(PJSIP/103,30,c)
+ same => n,Hangup()

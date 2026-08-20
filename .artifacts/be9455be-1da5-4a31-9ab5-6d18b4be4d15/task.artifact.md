@@ -1,0 +1,8 @@
+- [x] 모바일 로그인 및 메뉴 기능 연동
+    - [x] 모바일 메뉴 API 구현 (MobileMenuController.java)
+    - [x] 소스 코드 한글 깨짐 및 인코딩 에러 일괄 복구
+        - [x] SecurityConfig.java, WebConfig.java 정비
+        - [x] SmsService.java, Cm_encrypt.java 정비
+        - [x] WebSocketConfig.java, OmniChatwootService.java, OmniChatController.java 정비
+    - [x] 에뮬레이터 기동 문제 해결 (좀비 프로세스 종료 및 락 파일 삭제)
+    - [x] 최종 빌드 및 검증

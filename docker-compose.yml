@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # 🚀 Smart ERP Backend
+  smart-erp-backend:
+    build: ./erp-backend
+    container_name: smart-erp-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./storage:/app/storage
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - STORAGE_PATH=/app/storage
+    restart: always
+
+  # 🚀 Smart ERP Frontend
+  smart-erp-frontend:
+    build: ./erp-frontend
+    container_name: smart-erp-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - smart-erp-backend
+    restart: always

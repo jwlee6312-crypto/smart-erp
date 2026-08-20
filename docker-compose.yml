@@ -9,9 +9,10 @@ services:
       - "8080:8080"
     volumes:
       - ./storage:/app/storage
+    env_file:
+      - .env
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - STORAGE_PATH=/app/storage
     restart: always
 
   # 🚀 Smart ERP Frontend

@@ -22,7 +22,7 @@ services:
     build: ./erp-frontend
     container_name: smart-erp-frontend
     ports:
-      - "80:80"
+      - "9000:80"
     depends_on:
       - smart-erp-backend
     restart: always

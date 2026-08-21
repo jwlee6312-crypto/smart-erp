@@ -219,7 +219,7 @@
                                     <textarea v-model="formDiary.diarycontent" class="form-control border-0 rounded-0" style="min-height: 250px; resize: vertical;" placeholder="상담 내용을 상세히 기록하세요."></textarea>
                                 </td>
                             </tr>
-                            <tr v-if="formDiary.salescoaching" class="bg-success bg-opacity-10">
+                            <tr v-show="formDiary.salescoaching" class="bg-success bg-opacity-10">
                                 <th class="bg-success bg-opacity-25 text-success fw-bold border-top">상담코칭</th>
                                 <td colspan="5" class="p-3 border-top">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -825,7 +825,10 @@ onMounted(async () => {
             const val = cell.getValue() || '';
             return val.length > 50 ? val.substring(0, 50) + '...' : val;
         }},
-        { title: "상태", field: "statenm", width: 80 }
+        { title: "상태", field: "statenm", width: 80 },
+        { title: "코칭", field: "salescoaching", visible: false },
+        { title: "코칭일", field: "reportdt", visible: false },
+        { title: "확인여부", field: "coachingreadyn", visible: false }
       ]
     })
     gridDiary.on("rowClick", (e, row) => {

@@ -115,7 +115,7 @@
         WHERE CMPYCD = #{cmpycd} AND SALESID = #{salesid};
 
         UPDATE HSAA300T_TBL SET
-            COACHING_READYN = 'Y',
+            COACHING_READYN = 'N',
             SALES_COACHING = #{salescoaching},
             UPDTIME = GETDATE(),
             UPDEMP = #{updemp}

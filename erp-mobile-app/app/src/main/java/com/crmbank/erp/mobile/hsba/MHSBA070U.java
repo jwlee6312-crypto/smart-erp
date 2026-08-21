@@ -8,7 +8,6 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -18,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.crmbank.erp.mobile.BaseActivity;
 import com.crmbank.erp.mobile.RetrofitClient;
 import com.crmbank.erp.mobile.ApiService;
-import com.crmbank.erp.mobile.ApiResponse;
 import com.crmbank.erp.mobile.CodeDto;
 import com.crmbank.erp.mobile.PopupAdapter;
 import com.crmbank.erp.mobile.R;
@@ -33,14 +31,15 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * 🚀 [MHSBA070U] 거래처 정보 등록
- * 웹 HSBA070U.vue 로직 기반 모바일 최적화 버전
+ * 🚀 [MHSBA070U] 거래처 정보 등록 (UI 최적화 버전)
+ * - 사용자 요청에 따른 Row by Row 배치
+ * - 메일주소 추가 및 전자계산서 항목 제거
  */
 public class MHSBA070U extends BaseActivity {
 
-    private EditText etCustCd, etCustNm, etCustNo, etBossNm, etTelNo, etAddress, etDAddress, etCustType, etCustKind;
+    private EditText etCustCd, etCustNm, etCustNo, etBossNm, etTelNo, etEmail, etAddress, etDAddress, etCustType, etCustKind;
     private Spinner spStatus;
-    private Switch swElcYn, swUseYn;
+    private Switch swUseYn;
     private ApiService apiService;
     private String cmpycd, userid;
     private String currentActKind = "I0";
@@ -62,12 +61,12 @@ public class MHSBA070U extends BaseActivity {
         etCustNo = findViewById(R.id.etCustNo);
         etBossNm = findViewById(R.id.etBossNm);
         etTelNo = findViewById(R.id.etTelNo);
+        etEmail = findViewById(R.id.etEmail);
         etAddress = findViewById(R.id.etAddress);
         etDAddress = findViewById(R.id.etDAddress);
         etCustType = findViewById(R.id.etCustType);
         etCustKind = findViewById(R.id.etCustKind);
         spStatus = findViewById(R.id.spStatus);
-        swElcYn = findViewById(R.id.swElcYn);
         swUseYn = findViewById(R.id.swUseYn);
 
         findViewById(R.id.btnSearch).setOnClickListener(v -> openCustSearchPopup());
@@ -85,11 +84,11 @@ public class MHSBA070U extends BaseActivity {
         etCustNo.setText("");
         etBossNm.setText("");
         etTelNo.setText("");
+        etEmail.setText("");
         etAddress.setText("");
         etDAddress.setText("");
         etCustType.setText("");
         etCustKind.setText("");
-        swElcYn.setChecked(true);
         swUseYn.setChecked(true);
     }
 
@@ -153,11 +152,11 @@ public class MHSBA070U extends BaseActivity {
         etCustNo.setText(getStringVal(item, "custno"));
         etBossNm.setText(getStringVal(item, "bossnm"));
         etTelNo.setText(getStringVal(item, "telno"));
+        etEmail.setText(getStringVal(item, "email"));
         etAddress.setText(getStringVal(item, "address"));
         etDAddress.setText(getStringVal(item, "d_address"));
         etCustType.setText(getStringVal(item, "custtype"));
         etCustKind.setText(getStringVal(item, "custkind"));
-        swElcYn.setChecked("Y".equals(getStringVal(item, "elcyn")));
         swUseYn.setChecked("Y".equals(getStringVal(item, "useyn")));
 
         String status = getStringVal(item, "status");
@@ -180,12 +179,12 @@ public class MHSBA070U extends BaseActivity {
         p.put("custno", etCustNo.getText().toString().trim());
         p.put("bossnm", etBossNm.getText().toString().trim());
         p.put("telno", etTelNo.getText().toString().trim());
+        p.put("email", etEmail.getText().toString().trim());
         p.put("address", etAddress.getText().toString().trim());
         p.put("d_address", etDAddress.getText().toString().trim());
         p.put("custtype", etCustType.getText().toString().trim());
         p.put("custkind", etCustKind.getText().toString().trim());
         p.put("status", statusOptions.get(spStatus.getSelectedItemPosition()).codecd);
-        p.put("elcyn", swElcYn.isChecked() ? "Y" : "N");
         p.put("useyn", swUseYn.isChecked() ? "Y" : "N");
         p.put("updemp", userid);
 

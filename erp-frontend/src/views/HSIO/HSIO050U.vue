@@ -2,7 +2,7 @@
 	=============================================================
 	프로그램명	: 발주등록(구매요청분) (HSIO050U)
 	작성일자	: 2025.02.24
-	설명        : 발주 마스터/상세 관리 (HSOD100U 표준화 규칙 적용)
+	설명        : 발주 마스터/상세 관리 (화면 데이터 기반 출력/메일 기능 탑재)
 	=============================================================
 -->
 
@@ -23,6 +23,13 @@
         <button class="btn-erp btn-init" @click="initialize">초기화</button>
         <button class="btn-erp btn-search" @click="search">조회</button>
         <button class="btn-erp btn-success" @click="handleOpenHelp('REQ')">구매요청</button>
+        <button class="btn-erp btn-primary" @click="printOrder" :disabled="!form_02.balno || form_02.balno === '0000'">발주서 출력</button>
+
+        <!-- 🚀 [개선] 메일 전송 버튼 스타일 강화 -->
+        <button class="btn btn-sm btn-info text-white fw-bold px-3" @click="sendMail" :disabled="!form_02.balno || form_02.balno === '0000'" style="height: 32px; min-width: 80px;">
+          <i class="bi bi-envelope-at me-1"></i> 메일 전송
+        </button>
+
         <button class="btn-erp btn-save" @click="save" :disabled="isClosed">저장</button>
         <button class="btn-erp btn-delete" @click="handleFullDelete" :disabled="!form_02.balno || form_02.balno === '0000' || isClosed">전체삭제</button>
       </div>
@@ -30,7 +37,6 @@
 
     <!-- 💡 2. 메인 컨텐츠 영역 -->
     <div class="flex-grow-1 overflow-hidden p-2 d-flex flex-column gap-2 bg-light main-content-wrapper">
-      <!-- [상단] 조회 필터 영역 -->
       <div class="card border shadow-sm flex-shrink-0 overflow-hidden">
         <div class="card-body p-0 bg-white">
           <table class="erp-table-dense" width="100%">
@@ -54,19 +60,15 @@
         </div>
       </div>
 
-      <!-- [하단] 투-그리드 레이아웃 영역 -->
       <div class="d-flex gap-2 flex-grow-1 overflow-hidden" style="min-height: 0;">
-        <!-- ⬅️ 좌측: 발주 목록 -->
-        <div class="card border shadow-sm d-flex flex-column overflow-hidden grid-container-left" style="width: 350px; min-width: 350px;">
+        <div class="card border shadow-sm d-flex flex-column overflow-hidden grid-container-left" style="width: 320px; min-width: 320px;">
           <div class="card-header bg-white py-1 px-3 border-bottom fw-bold small text-dark">발주 목록</div>
           <div class="card-body p-0 flex-grow-1 bg-white overflow-hidden d-flex flex-column">
             <div ref="tableRef1" class="tabulator-instance flex-grow-1"></div>
           </div>
         </div>
 
-        <!-- ➡️ 우측: 마스터 상세 폼 + 품목 상세 그리드 -->
         <div class="flex-grow-1 d-flex flex-column gap-2 overflow-hidden">
-          <!-- 상세 마스터 정보 폼 -->
           <div class="card border shadow-sm flex-shrink-0 overflow-hidden">
             <div class="card-body p-0 bg-white">
               <table class="erp-table-dense w-100">
@@ -124,7 +126,6 @@
             </div>
           </div>
 
-          <!-- 상세 품목 그리드 영역 -->
           <div class="card border shadow-sm flex-grow-1 d-flex flex-column overflow-hidden grid-container-right">
             <div class="card-header bg-white py-1 px-3 border-bottom d-flex align-items-center justify-content-between flex-shrink-0">
               <span class="fw-bold small text-dark"><i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>발주 품목 리스트</span>
@@ -301,6 +302,58 @@ async function save() {
   } catch (e) { vAlertError('저장 실패'); }
 }
 
+/** 🚀 [추가] 화면 데이터 기반 발주서 HTML 생성 */
+const generateOrderHtml = async () => {
+    const mst = form_02;
+    const dtl = grid2?.getData() || [];
+    const companyRes = await api.post('/comm/HABA_100U_STR', { actkind: 'S0', cmpycd: authStore.cmpycd });
+    const cInfo = companyRes.data?.[0] || {};
+    const gLines = [];
+    ['gline1', 'gline2', 'gline3', 'gline4', 'gline5'].forEach(k => {
+        const v = String(cInfo[k] || '').trim(); if (v) gLines.push(v);
+    });
+    const gWidth = gLines.length === 5 ? 45 : (gLines.length === 4 ? 40 : (gLines.length === 3 ? 33 : 24));
+    const fC = (n: any) => Number(n || 0).toLocaleString();
+    let totalAmt = 0, totalVat = 0;
+    let rowsHtml = '';
+    for (let i = 0; i < Math.max(dtl.length, 14); i++) {
+        const item = dtl[i] || {};
+        if (item.itemnm) {
+            const qty = Number(item.balqty || 0); const amt = Number(item.balamt || 0); const vat = Number(item.balvat || 0);
+            totalAmt += amt; totalVat += vat;
+            rowsHtml += `<tr height="35"><td align="left">${item.itemnm}</td><td>${item.itsize || ''}</td><td>${item.unit || ''}</td><td align="right">${fC(qty)}</td><td align="right">${fC(qty > 0 ? amt/qty : 0)}</td><td align="right">${fC(amt)}</td><td align="right">${fC(vat)}</td><td align="right">${fC(amt+vat)}</td><td>&nbsp;</td></tr>`;
+        } else { rowsHtml += `<tr height="35"><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>`; }
+    }
+    return `<html><head><style>body { font-family: 'GulimChe', sans-serif; font-size: 9pt; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #333; padding: 4px; text-align: center; }</style></head>
+    <body onload="window.print()">
+        <table border="0" style="margin-bottom:20px"><tr><td width="${100-gWidth}%" style="font-size:20pt; font-weight:bold">발&nbsp;&nbsp;주&nbsp;&nbsp;서</td><td width="${gWidth}%">
+        <table border="1"><tr><td rowspan="2" width="20px">결재</td>${gLines.map(g => `<td>${g}</td>`).join('')}</tr><tr>${gLines.map(()=>`<td height="50px"></td>`).join('')}</tr></table></td></tr></table>
+        <table border="1"><tr><th>발신</th><td>${authStore.cmpynm}</td><th>발주일자</th><td>${mst.balymd}</td></tr><tr><th>수신</th><td>${mst.custnm}</td><th>납품기한</th><td>${mst.reqymd}</td></tr></table>
+        <table border="1" style="margin-top:10px"><thead><tr bgcolor="#eee"><th>품목</th><th>규격</th><th>단위</th><th>수량</th><th>단가</th><th>금액</th><th>부가세</th><th>합계</th><th>비고</th></tr></thead>
+        <tbody>${rowsHtml}</tbody><tfoot><tr bgcolor="#eee"><td>합계</td><td colspan="4"></td><td align="right">${fC(totalAmt)}</td><td align="right">${fC(totalVat)}</td><td align="right">${fC(totalAmt + totalVat)}</td><td></td></tr></tfoot></table>
+    </body></html>`;
+};
+
+/** 🚀 [추가] 발주서 출력 */
+const printOrder = async () => {
+    const html = await generateOrderHtml();
+    const win = window.open('', '_blank', 'width=800,height=900');
+    win?.document.write(html); win?.document.close();
+};
+
+/** 🚀 [추가] 발주서 메일 전송 */
+const sendMail = async () => {
+    const mst = form_02;
+    if (!mst.balno || mst.balno === '0000') return vAlertError('발주서를 먼저 조회하세요.');
+    if (!mst.email || !mst.email.includes('@')) return vAlertError('유효한 거래처 메일 주소가 없습니다.');
+    if (!confirm(`${mst.email}로 발주서를 전송하시겠습니까?`)) return;
+    try {
+        const html = await generateOrderHtml();
+        await api.post('/mail/send-bal', { htmlcontent: html, email: mst.email, custnm: mst.custnm, custcd: mst.custcd, docgb: 'BAL', no: `${mst.balym}-${mst.balno}` });
+        vAlert('메일이 성공적으로 전송되었습니다.');
+    } catch (e) { vAlertError('메일 전송 실패'); }
+};
+
 const handleOpenHelp = (type: string, target?: any) => {
   if (type === 'DEPT') {
     Object.assign(modalProps, {
@@ -384,7 +437,7 @@ function initialize() {
   resetForm(form_02);
   Object.assign(form_02, {
     cmpycd: authStore.cmpycd, balno: '0000', balym: today.replace(/-/g, '').substring(0, 6), balymd: today, reqymd: today,
-    deptcd: authStore.deptcd, deptnm: authStore.deptnm, userid: authStore.userid, balgb: '1', reqno: '', reqym: '', email: ''
+    deptcd: authStore.deptcd, deptnm: authStore.deptnm, userid: authstore.userid, balgb: '1', reqno: '', reqym: '', email: ''
   });
   grid1?.clearData(); grid2?.clearData();
 }
@@ -406,7 +459,7 @@ onUnmounted(() => {
 onMounted(async () => {
     nextTick(initGrids);
     api.post('/ha00/HA00_00P_STR', { gubun: 'SD', cmpycd: authStore.cmpycd, gbncd: '', code: '', remark: '' }).then(r => { userData.value = r.data; });
-    api.get('/hp00/HP00_000S_STR', { params: { gubun: 'CL' } }).then(r => { if(r.data?.length) closingInfo.sclsym = r.data[0].sclsym; });
+    api.get('/hp00/HP00_000S_STR', { params: { gubun: 'CL', cmpycd: authStore.cmpycd } }).then(r => { if(r.data?.length) closingInfo.sclsym = r.data[0].sclsym; });
     initialize();
 })
 </script>

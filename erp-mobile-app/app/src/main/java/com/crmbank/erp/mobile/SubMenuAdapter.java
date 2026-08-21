@@ -79,9 +79,11 @@ public class SubMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             h.tvHeader.setText(header.getTitle());
             h.ivArrow.setRotation(header.isExpanded() ? 180 : 0);
 
-            // 🚀 웹소스(SideMenu.vue)와 동일한 폴더 아이콘 적용 (bi-folder2-open 대응)
-            h.ivHeaderIcon.setImageResource(android.R.drawable.ic_menu_slideshow); 
-            h.ivHeaderIcon.setAlpha(0.6f);
+            // 🚀 안전한 아이콘 설정 (Null 체크 추가)
+            if (h.ivHeaderIcon != null) {
+                h.ivHeaderIcon.setImageResource(android.R.drawable.ic_menu_slideshow); 
+                h.ivHeaderIcon.setAlpha(0.6f);
+            }
             
             h.layoutHeaderCard.setOnClickListener(v -> {
                 boolean targetState = !header.isExpanded();

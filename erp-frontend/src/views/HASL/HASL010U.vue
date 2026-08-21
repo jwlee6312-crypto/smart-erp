@@ -21,6 +21,7 @@
       <div class="btn-group-erp d-flex gap-1 pe-2">
         <button class="btn-erp btn-init" @click="initialize">초기화</button>
         <button class="btn-erp btn-search" @click="searchslips">조회</button>
+        <button class="btn-erp btn-primary" @click="printSlip" :disabled="!masterform.slipno">전표 출력</button>
         <button class="btn-erp btn-save" @click="save">저장</button>
         <button v-if="masterform.slipno" class="btn-erp btn-delete" @click="deletedata">삭제</button>
       </div>
@@ -623,6 +624,126 @@ async function deletedata() {
     valert('삭제되었습니다.'); initialize(); searchslips();
   } catch (e) { valerterror('삭제 실패'); }
 }
+
+/** 🚀 [추가] 회계전표 출력 (ASP 원본 소스 로직 완벽 이식) */
+const printSlip = async () => {
+    const mst = masterform;
+    const dtl = grid2?.getData() || [];
+    if (!mst.slipno) return valerterror('출력할 전표를 선택하세요.');
+
+    try {
+        // 1. 공통 설정 조회 (결재라인 등)
+        const companyRes = await api.post('/comm/HABA_100U_STR', { actkind: 'S0', cmpycd: authstore.cmpycd });
+        const cInfo = companyRes.data?.[0] || {};
+        const gLines = [];
+        ['gline1', 'gline2', 'gline3', 'gline4', 'gline5'].forEach(k => {
+            const v = String(cInfo[k] || '').trim(); if (v) gLines.push(v);
+        });
+        const gWidth = gLines.length === 5 ? 45 : (gLines.length === 4 ? 40 : (gLines.length === 3 ? 33 : 24));
+
+        // 2. 금액 포맷터
+        const fC = (n: any) => Number(n || 0).toLocaleString();
+        let totalDb = 0, totalCr = 0;
+        let rowsHtml = '';
+
+        // 3. 리스트 HTML 생성 (최소 10행 보장)
+        for (let i = 0; i < Math.max(dtl.length, 10); i++) {
+            const item = dtl[i] || {};
+            if (item.acctnm) {
+                const db = String(item.dbcr).toLowerCase() === 'd' ? Number(item.amount || 0) : 0;
+                const cr = String(item.dbcr).toLowerCase() === 'c' ? Number(item.amount || 0) : 0;
+                totalDb += db; totalCr += cr;
+
+                // 세부내역 문자열 조립
+                const subDetail = [item.deptnm, item.subnm, item.mgtno, item.prjnm]
+                    .filter(v => v && String(v).trim()).join(' | ');
+
+                rowsHtml += `
+                <tr>
+                    <td rowspan="2">${item.srowno || (i+1)}</td>
+                    <td rowspan="2" align="left">${item.acctnm}<br><small>${item.acctcd}</small></td>
+                    <td align="left">${(item.remark || '').replace(/ /g, '&nbsp;')}</td>
+                    <td align="right">${db > 0 ? fC(db) : ''}</td>
+                    <td align="right">${cr > 0 ? fC(cr) : ''}</td>
+                </tr>
+                <tr><td colspan="3" style="font-size:8pt; color:#555; text-align:left; padding-left:10px; height:20px;">${subDetail}</td></tr>`;
+            } else {
+                rowsHtml += `<tr><td rowspan="2">${i+1}</td><td rowspan="2"></td><td></td><td></td><td></td></tr><tr><td colspan="3" height="20"></td></tr>`;
+            }
+        }
+
+        const html = `
+        <html>
+        <head>
+            <title>회계전표 출력</title>
+            <style>
+                body { font-family: 'Gulim', '굴림', sans-serif; color: black; margin: 0; padding: 20px; }
+                table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+                th, td { border: 1px solid #333; padding: 4px; text-align: center; }
+                .bg-gray { background-color: #eeeeee !important; }
+                .title-text { font-size: 24pt; font-weight: bold; text-decoration: underline; text-align: center; }
+            </style>
+        </head>
+        <body onload="window.print()">
+            <table border="0" style="border:0; margin-bottom:20px;">
+                <tr>
+                    <td width="${100-gWidth}%" align="center" style="border:0"><div class="title-text">회 계 전 표</div></td>
+                    <td width="${gWidth}%" valign="top" style="border:0">
+                        <table border="1">
+                            <tr><td class="bg-gray" rowspan="2" width="15%">결재</td>${gLines.map(g => `<td class="bg-gray">${g}</td>`).join('')}</tr>
+                            <tr>${gLines.map(() => `<td height="50"></td>`).join('')}</tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <table border="1">
+                <tr>
+                    <td class="bg-gray" width="15%">전표번호</td>
+                    <td width="18%">${mst.slipymd.replace(/-/g,'')}-${mst.slipno}</td>
+                    <td class="bg-gray" width="15%">회계일자</td><td width="18%">${mst.acctymd || ''}</td>
+                    <td class="bg-gray" width="15%" rowspan="2">작 성 자</td><td rowspan="2">${mst.empnm} (인)</td>
+                </tr>
+                <tr>
+                    <td class="bg-gray">발행부서</td><td>${mst.deptnm}</td>
+                    <td class="bg-gray">작성일자</td><td>${mst.slipymd}</td>
+                </tr>
+                <tr>
+                    <td class="bg-gray">거래내역</td><td colspan="3" align="left">&nbsp;${mst.business}</td>
+                    <td class="bg-gray">지출예정일</td><td></td>
+                </tr>
+            </table>
+            <table border="1" style="margin-top:10px">
+                <thead>
+                    <tr class="bg-gray">
+                        <th rowspan="2" width="40">No</th><th rowspan="2" width="150">계정과목</th><th>적 요</th><th width="110">차 변</th><th width="110">대 변</th>
+                    </tr>
+                    <tr class="bg-gray"><th colspan="3">세 부 내 역</th></tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+                <tfoot>
+                    <tr class="bg-gray" style="font-weight:bold">
+                        <td colspan="3">합 계</td><td align="right">${fC(totalDb)}</td><td align="right">${fC(totalCr)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div style="margin-top:20px; display:flex; justify-content:space-between;">
+                <table style="width:60%"><tr><td class="bg-gray" width="80">결재자 의견</td><td height="60"></td></tr></table>
+                <table style="width:35%">
+                    <tr><td class="bg-gray" rowspan="2" width="30">원인</td>${gLines.map(g => `<td class="bg-gray">${g}</td>`).join('')}</tr>
+                    <tr>${gLines.map(() => `<td height="40"></td>`).join('')}</tr>
+                </table>
+            </div>
+            <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:9pt;">
+                <div>${authstore.cmpynm}</div><div>Printed by Smart ERP</div>
+            </div>
+        </body>
+        </html>`;
+
+        const win = window.open('', '_blank', 'width=900,height=900');
+        win?.document.write(html);
+        win?.document.close();
+    } catch (e) { valerterror('출력 생성 실패'); }
+};
 
 onMounted(() => {
   api.post('/ha00/HA00_00P_STR', { gubun: 'E0', gbncd: '120' }).then(r => { purchasevatoptions.value = r.data; });

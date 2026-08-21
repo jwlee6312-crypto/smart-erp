@@ -49,6 +49,13 @@
         <activity android:name="com.crmbank.erp.mobile.hsba.MHSBA070U" />
         <activity android:name="com.crmbank.erp.mobile.hsba.MHSBA900U" />
 
+        <!-- 🚀 영업활동 관리 (HSAA) -->
+        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA100U" />
+        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA110U" />
+        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA120U" />
+        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA130U" />
+        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA140U" />
+        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA150U" />
         <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA200S" />
         <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA400U" />
         <activity android:name="com.crmbank.erp.mobile.haba.MHABA910U" />

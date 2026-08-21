@@ -2,7 +2,7 @@
 	=============================================================
 	프로그램명	: 거래명세표 (HSIO620S)
 	작성일자	: 2025.02.24
-	설명        : 영업 출고 내역 조회 및 명세표 인쇄 (소문자 원칙 및 인터셉터 표준화 적용)
+	설명        : 영업 출고 내역 조회 및 화면 데이터 기반 메일 전송
 	=============================================================
 -->
 
@@ -21,14 +21,17 @@
       <div class="btn-group-erp d-flex gap-1">
         <button class="btn-erp btn-init" @click="initialize">초기화</button>
         <button class="btn-erp btn-search" @click="searchMaster">조회</button>
-        <button class="btn-erp btn-outline-secondary" @click="printSlip('Print')">거래명세표 인쇄</button>
-        <button class="btn-erp btn-outline-secondary" @click="printSlip('Print_Req')">출고의뢰서 인쇄</button>
+        <button class="btn-erp btn-primary" @click="printSpecification" :disabled="!selectedMasterInfo">거래명세서 출력</button>
+        <button class="btn-erp btn-success" @click="printOutboundSheet" :disabled="!selectedMasterInfo">출고증 출력</button>
+        <!-- 🚀 [개선] 버튼 가시성 확보 -->
+        <button class="btn btn-sm btn-info text-white fw-bold px-3" @click="sendMail" :disabled="!selectedMasterInfo" style="min-width: 80px; height: 32px;">
+            <i class="bi bi-envelope-at me-1"></i> 메일 전송
+        </button>
       </div>
     </div>
 
     <!-- 💡 2. 메인 컨텐츠 영역 -->
     <div class="flex-grow-1 overflow-hidden p-2 d-flex flex-column gap-2">
-      <!-- 🅰️ 조회 조건 영역 -->
       <div class="card border shadow-sm overflow-hidden">
         <div class="card-body p-0">
           <table class="erp-table-full">
@@ -51,9 +54,7 @@
                 </td>
                 <th style="width: 100px;">확정여부</th>
                 <td style="width: 150px;">
-                  <select v-model="searchData.slipyn" class="form-select form-select-sm">
-                    <option value="Y">확정</option>
-                  </select>
+                  <select v-model="searchData.slipyn" class="form-select form-select-sm"><option value="Y">확정</option></select>
                 </td>
                 <th style="width: 100px;">거&nbsp;&nbsp;래&nbsp;&nbsp;처</th>
                 <td>
@@ -69,24 +70,17 @@
         </div>
       </div>
 
-      <!-- 🅱️ 메인 작업 영역 -->
       <div class="d-flex flex-grow-1 gap-2 overflow-hidden">
         <div class="card border shadow-sm d-flex flex-column" style="width: 350px;">
-          <div class="card-header bg-light py-1 px-3 border-bottom fw-bold small text-dark">
-            <i class="bi bi-list-ul me-1"></i> 출고 목록
-          </div>
+          <div class="card-header bg-light py-1 px-3 border-bottom fw-bold small text-dark">출고 목록</div>
           <div class="card-body p-0 flex-grow-1 bg-white overflow-hidden d-flex flex-column">
               <div ref="masterGridElement" class="tabulator-instance flex-grow-1"></div>
           </div>
         </div>
-
         <div class="flex-grow-1 d-flex flex-column gap-2 overflow-hidden">
           <div class="card border shadow-sm flex-grow-1 overflow-hidden d-flex flex-column">
             <div class="card-header bg-white py-1 px-3 border-bottom d-flex align-items-center justify-content-between">
-              <span class="fw-bold small text-dark">
-                <i class="bi bi-grid-3x3-gap-fill me-1"></i> 상세 품목 내역
-                <span v-if="selectedMasterInfo" class="ms-2 text-primary">[{{ selectedMasterInfo.custnm }}] {{ selectedMasterInfo.ioym }}-{{ selectedMasterInfo.iono }}</span>
-              </span>
+              <span class="fw-bold small text-dark"><i class="bi bi-grid-3x3-gap-fill me-1"></i> 상세 품목 내역</span>
             </div>
             <div class="card-body p-0 flex-grow-1 bg-white overflow-hidden d-flex flex-column">
               <div ref="detailGridElement" class="tabulator-instance flex-grow-1"></div>
@@ -100,167 +94,133 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted, computed, nextTick } from 'vue'
+import { reactive, ref, onMounted, nextTick } from 'vue'
 import { TabulatorFull as Tabulator } from 'tabulator-tables'
 import 'tabulator-tables/dist/css/tabulator_bootstrap5.min.css'
-import AppAlert from '@/components/AppAlert.vue'
-import Modal from '@/components/Modal.vue'
 import { useAlerts } from '@/composables/useAlerts'
 import { api } from '@/utils/axios'
 import { useAuthStore } from '@/stores/authStore'
 import { useFormReset } from '@/composables/useFormReset'
 import { getDate } from '@/composables/useDate'
-import type { ModalProps } from '@/types/modal'
+import { numberToHanja } from '@/utils/hanja'
+import AppAlert from '@/components/AppAlert.vue'
+import Modal from '@/components/Modal.vue'
 
 const authStore = useAuthStore()
 const { showAlert, showError, alertMessage, vAlert, vAlertError } = useAlerts()
 const { resetForm } = useFormReset()
 const { firstDay, today } = getDate()
 
-// 1. 상태 관리
-const searchData = reactive({
-  whcd: '000',
-  fromdt: firstDay,
-  todt: today,
-  slipyn: 'Y',
-  custcd: '',
-  custnm: ''
-})
-
-const whOptions = ref<any[]>([])
-const selectedMasterInfo = ref<any>(null)
-
-const masterGridElement = ref<HTMLElement | null>(null)
-const detailGridElement = ref<HTMLElement | null>(null)
-let masterGrid: Tabulator | null = null
-let detailGrid: Tabulator | null = null
+const searchData = reactive({ whcd: '000', fromdt: firstDay, todt: today, slipyn: 'Y', custcd: '', custnm: '' })
+const whOptions = ref<any[]>([]); const selectedMasterInfo = ref<any>(null)
+const masterGridElement = ref<HTMLElement | null>(null); const detailGridElement = ref<HTMLElement | null>(null)
+let masterGrid: Tabulator | null = null; let detailGrid: Tabulator | null = null
 
 const initGrids = () => {
-  if (masterGridElement.value) {
-    masterGrid = new Tabulator(masterGridElement.value, {
-      layout: "fitColumns", height: "100%", placeholder: "데이터 없음",
-      columns: [
-        { title: "No", formatter: "rownum", width: 40, hozAlign: "center", headerSort: false },
-        { title: "거래처", field: "custnm", minWidth: 150, headerSort: false, cssClass: "fw-bold text-primary cursor-pointer" },
-        { title: "출고번호", field: "iono_full", width: 120, hozAlign: "center", headerSort: false,
-          formatter: (cell) => {
-              const d = cell.getData();
-              return `<span class="text-decoration-underline">${d.ioym}-${d.iono}</span>`;
-          }
-        }
-      ]
-    })
-    masterGrid.on("rowClick", (e, row) => {
-      const data = row.getData()
-      selectedMasterInfo.value = data
-      fetchDetails(data)
-    })
-  }
+  masterGrid = new Tabulator(masterGridElement.value!, {
+    layout: "fitColumns", height: "100%", placeholder: "데이터 없음",
+    columns: [
+      { title: "No", formatter: "rownum", width: 40, hozAlign: "center" },
+      { title: "거래처", field: "custnm", minWidth: 150, cssClass: "fw-bold text-primary cursor-pointer" },
+      { title: "출고번호", field: "iono_full", width: 120, hozAlign: "center", mutatorData: (v,d)=>`${d.ioym}-${d.iono}` }
+    ]
+  });
+  masterGrid.on("rowClick", (e, row) => { selectedMasterInfo.value = row.getData(); fetchDetails(row.getData()); });
 
-  if (detailGridElement.value) {
-    detailGrid = new Tabulator(detailGridElement.value, {
-        layout: 'fitColumns', height: '100%',
-        columnDefaults: {
-            headerSort: false,
-            headerHozAlign: "center",
-            hozAlign: 'right', // 🚀 기본값 우측 정렬
-            vertAlign: "middle",
-            minWidth: 100
-        },
-      columns: [
+  detailGrid = new Tabulator(detailGridElement.value!, {
+    layout: 'fitColumns', height: '100%',
+    columns: [
         { title: "품목명", field: "itemnm", minWidth: 200, hozAlign: "left", cssClass: "fw-bold" },
-        { title: "규격", field: "itsize", width: 200 },
+        { title: "규격", field: "itsize", width: 150 },
         { title: "단위", field: "unit", width: 60, hozAlign: "center" },
-        { title: "수량", field: "ioqty", width: 150, hozAlign: "right", formatter: "money", formatterParams: { precision: 2 } },
-        { title: "금액", field: "jsanamt", width: 150, hozAlign: "right", formatter: "money", formatterParams: { precision: 0 } },
-        { title: "부가세", field: "jsanvat", width: 150, hozAlign: "right", formatter: "money", formatterParams: { precision: 0 } }
-      ]
-    })
-  }
-}
-
-// 3. 기능 구현
-async function fetchWhOptions() {
-  try {
-    const res = await api.get('/hs00/HS00_000S_STR', { params: { gubun: 'W0', cmpycd: authStore.cmpycd } })
-    // 🚀 DB 오리지널 명칭 whcd, whnm을 사용하여 정확하게 매핑 (인터셉터가 알맹이만 주므로 res.data 사용)
-    whOptions.value = res.data;
-  } catch (e) { console.error('창고 옵션 로드 실패') }
+        { title: "수량", field: "ioqty", width: 100, hozAlign: "right", formatter: "money" },
+        { title: "금액", field: "jsanamt", width: 120, hozAlign: "right", formatter: "money" },
+        { title: "부가세", field: "jsanvat", width: 110, hozAlign: "right", formatter: "money" }
+    ]
+  });
 }
 
 async function searchMaster() {
   try {
-    const res = await api.post('/hsio/HSIO_620S_STR', {
-        actkind: 'S1',
-        cmpycd: authStore.cmpycd,
-        iogbn: '200',
-        whcd: searchData.whcd,
-        fromdt: searchData.fromdt.replace(/-/g, ''),
-        todt: searchData.todt.replace(/-/g, ''),
-        custcd: searchData.custcd,
-        slipyn: searchData.slipyn
-    })
-    masterGrid?.setData(res.data)
-    detailGrid?.clearData()
-    selectedMasterInfo.value = null
+    const res = await api.post('/hsio/HSIO_620S_STR', { actkind: 'S1', cmpycd: authStore.cmpycd, iogbn: '200', whcd: searchData.whcd, fromdt: searchData.fromdt.replace(/-/g,''), todt: searchData.todt.replace(/-/g,''), custcd: searchData.custcd, slipyn: searchData.slipyn });
+    masterGrid?.setData(res.data); detailGrid?.clearData(); selectedMasterInfo.value = null;
   } catch (e) { vAlertError('조회 실패') }
 }
 
 async function fetchDetails(row: any) {
   try {
-    const res = await api.post('/hsio/HSIO_620S_STR', {
-        actkind: 'S0',
-        cmpycd: authStore.cmpycd,
-        iogbn: '200',
-        whcd: searchData.whcd,
-        fromdt: searchData.fromdt,
-        todt: searchData.todt,
-        custcd: row.custcd,
-        ioym: row.ioym,
-        iono: row.iono,
-        slipyn: searchData.slipyn
-    })
-    detailGrid?.setData(res.data)
+    const res = await api.post('/hsio/HSIO_620S_STR', { actkind: 'S0', cmpycd: authStore.cmpycd, iogbn: '200', custcd: row.custcd, ioym: row.ioym, iono: row.iono });
+    detailGrid?.setData(res.data);
   } catch (e) { vAlertError('상세 로드 실패') }
 }
 
-function printSlip(type: string) {
-  if (!selectedMasterInfo.value) return vAlertError('출고 내역을 먼저 선택하세요.')
-  const m = selectedMasterInfo.value
-  let url = type === 'Print' ? `/report/HSIO_TRANS_PRINT?PRTGU=Print&ioym=${m.ioym}&iono=${m.iono}` : `/report/HSIO_REQOUT_PRINT?PRTGU=Print&ioym=${m.ioym}&iono=${m.iono}`
-  window.open(url, 'print', 'width=700,height=600,scrollbars=yes')
+/** 🚀 [공통] 거래명세서 HTML 생성 로직 (v2.0) */
+const generateSpecHtml = async (m: any) => {
+    const [hRes, dRes, ourRes, stampRes] = await Promise.all([
+        api.post('/hsio/HSIO_TRANS_STR', { actkind: 'S1', cmpycd: authStore.cmpycd, ioym: m.ioym, iono: m.iono }),
+        api.post('/hsio/HSIO_TRANS_STR', { actkind: 'S0', cmpycd: authStore.cmpycd, ioym: m.ioym, iono: m.iono }),
+        api.post('/comm/HABA_900U_STR', { actkind: 'S0', cmpycd: authStore.cmpycd }),
+        api.post('/comm/HABA_100U_STR', { actkind: 'S0', cmpycd: authStore.cmpycd })
+    ]);
+    const h = hRes.data[0]; const dtl = dRes.data || []; const our = ourRes.data[0]; const sInfo = stampRes.data[0];
+    const fC = (n: any) => Number(n || 0).toLocaleString();
+    let totalAmt = 0, totalVat = 0, rowsHtml = '';
+    dtl.forEach(i => {
+        const amt = Number(i.jsanamt || 0); const vat = Number(i.jsanvat || 0); totalAmt += amt; totalVat += vat;
+        rowsHtml += `<tr height="25"><td>${i.ioymd.substring(4,8)}</td><td align="left">${i.itemnm}</td><td>${i.itsize || ''}</td><td>${i.unit || ''}</td><td align="right">${fC(i.ioqty)}</td><td align="right">${fC(i.jsanamt)}</td><td align="right">${fC(i.jsanvat)}</td></tr>`;
+    });
+    for(let k=dtl.length; k<15; k++) rowsHtml += '<tr height="25"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+    const stampUrl = sInfo.stampimg ? `/api/Upload_Images/${authStore.cmpycd}/LOGOIMG/${sInfo.stampimg}` : '';
+
+    return `<html><head><style>body { font-family: 'GulimChe', sans-serif; font-size: 9pt; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #333; padding: 4px; text-align: center; } .stamp { position: absolute; top: 80px; left: 580px; width: 50px; }</style></head>
+    <body onload="window.print()">
+        ${stampUrl ? `<img src="${stampUrl}" class="stamp">` : ''}
+        <h2 align="center">거 래 명 세 표</h2>
+        <table border="1"><tr><td width="50%"><b>${h.ioymd.substring(0,4)}년 ${h.ioymd.substring(4,6)}월 ${h.ioymd.substring(6,8)}일</b><br><br><b>${h.custnm}</b> 귀중</td><td>공급자<br>번호: ${our.saupno}<br>상호: ${our.cmpynm}<br>성명: ${our.bossnm}</td></tr></table>
+        <table border="1" style="margin-top:10px"><tr bgcolor="#eee"><th>월일</th><th>품목</th><th>규격</th><th>단위</th><th>수량</th><th>공급가</th><th>부가세</th></tr><tbody>${rowsHtml}</tbody>
+        <tfoot><tr bgcolor="#eee"><td>합계</td><td colspan="4"> 一金 ${numberToHanja(totalAmt+totalVat)}圓 整</td><td align="right">${fC(totalAmt)}</td><td align="right">${fC(totalVat)}</td></tr></tfoot></table>
+    </body></html>`;
+}
+
+const printSpecification = async () => {
+    const html = await generateSpecHtml(selectedMasterInfo.value);
+    const win = window.open('', '_blank', 'width=800,height=900');
+    win?.document.write(html); win?.document.close();
+}
+
+const printOutboundSheet = async () => { vAlert('출고증 출력 기능을 준비 중입니다.'); }
+
+const sendMail = async () => {
+    const m = selectedMasterInfo.value;
+    const targetEmail = String(m.email || '').trim();
+    if (!targetEmail.includes('@')) return vAlertError('거래처 메일 주소가 없습니다.');
+    if (!confirm(`${targetEmail}로 거래명세서를 전송하시겠습니까?`)) return;
+    try {
+        const html = await generateSpecHtml(m);
+        await api.post('/mail/send-statement', [{ htmlcontent: html, email: targetEmail, custnm: m.custnm, custcd: m.custcd, docgb: 'TRANS', no: `${m.ioym}-${m.iono}` }]);
+        vAlert('메일 전송 완료');
+    } catch (e) { vAlertError('메일 전송 실패') }
 }
 
 function initialize() {
-  resetForm(searchData)
-  searchData.whcd = '000'; searchData.slipyn = 'Y';
-  searchData.fromdt = firstDay; searchData.todt = today;
-  masterGrid?.clearData(); detailGrid?.clearData(); selectedMasterInfo.value = null
+  resetForm(searchData); searchData.whcd = '000'; searchData.slipyn = 'Y';
+  masterGrid?.clearData(); detailGrid?.clearData(); selectedMasterInfo.value = null;
 }
 
-const modalVisible = ref(false)
-const modalProps = reactive<ModalProps>({ title: '', path: '', defaultField: '', columns: [], data: {}, onConfirm: () => {}, type: 'table' })
-
+const modalVisible = ref(false); const modalProps = reactive<any>({ title: '', path: '', onConfirm: () => {} })
 function openHelp(type: string) {
   if (type === 'CUST') {
-    Object.assign(modalProps, {
-      title: '거래처 선택', path: '/ha00/HA00_00P_STR', defaultField: 'custnm', large: true,
-      data: { gubun: 'C4', cmpycd: authStore.cmpycd },
-      columns: [{ title: '코드', field: 'custcd', width: 80 }, { title: '거래처명', field: 'custnm', width: 200 }, { title: '주소', field: 'address', minWidth: 300 }],
-      onConfirm: (data: any) => { searchData.custcd = data.custcd; searchData.custnm = data.custnm }
-    })
-    modalVisible.value = true
+    Object.assign(modalProps, { title: '거래처 선택', path: '/ha00/HA00_00P_STR', data: { gubun: 'C4', cmpycd: authStore.cmpycd }, onConfirm: (d: any) => { searchData.custcd = d.custcd; searchData.custnm = d.custnm } })
+    modalVisible.value = true;
   }
 }
 
-const formatDateString = (v: any, sep: string) => v && v.length === 8 ? `${v.substring(0, 4)}${sep}${v.substring(4, 6)}${sep}${v.substring(6, 8)}` : v
-
 onMounted(async () => {
-  await fetchWhOptions()
-  nextTick(() => { initGrids(); searchMaster() })
+  api.get('/hs00/HS00_000S_STR', { params: { gubun: 'W0', cmpycd: authStore.cmpycd } }).then(r => whOptions.value = r.data);
+  nextTick(() => { initGrids(); searchMaster(); });
 })
 </script>
 
 <style scoped>
-.tabulator-instance { width: 100% !important; background-color: #fff; }
+.tabulator-instance { width: 100% !important; background-color: #fff; border-bottom: 3px solid #005a9f !important; }
 </style>

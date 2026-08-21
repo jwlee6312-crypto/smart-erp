@@ -14,6 +14,10 @@ public interface CommMapper {
     List<Map<String, Object>> HA00_200S_STR(Map<String, Object> param);
     List<Map<String, Object>> GET_PROGRAM_LIST(Map<String, Object> param);
 
+    List<Map<String, Object>> HABA_100U_STR(Map<String, Object> param);
+    List<Map<String, Object>> HABA_030U_STR(Map<String, Object> param);
+    List<Map<String, Object>> HABA_900U_STR(Map<String, Object> param);
+
     void INSERT_LOGIN_HISTORY(Map<String, Object> param);
     void DELETE_USER_CONN(Map<String, Object> param);
 }

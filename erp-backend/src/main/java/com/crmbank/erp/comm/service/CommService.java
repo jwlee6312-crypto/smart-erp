@@ -67,7 +67,15 @@ public class CommService {
 
     private Map<String, Object> normalize(Map<String, Object> map) {
         Map<String, Object> res = new HashMap<>();
-        if (map != null) map.forEach((k, v) -> res.put(k.toLowerCase(), v));
+        if (map != null) {
+            for (String key : map.keySet()) {
+                String newKey = key.toLowerCase();
+                // 🚀 'A.ITEMCD' 형태의 별칭 제거 (itemcd 로 정규화)
+                int dotIdx = newKey.lastIndexOf('.');
+                if (dotIdx != -1) newKey = newKey.substring(dotIdx + 1);
+                res.put(newKey, map.get(key));
+            }
+        }
         return res;
     }
 

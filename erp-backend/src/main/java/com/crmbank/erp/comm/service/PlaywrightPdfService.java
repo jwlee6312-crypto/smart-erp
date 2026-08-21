@@ -19,6 +19,32 @@ import java.util.regex.Pattern;
 @Service
 public class PlaywrightPdfService {
 
+    /**
+     * 🚀 [추가] HTML 소스를 직접 PDF로 변환
+     */
+    public byte[] generatePdfFromHtml(String htmlContent) {
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+            BrowserContext context = browser.newContext();
+            Page page = context.newPage();
+            
+            // HTML 내용 주입
+            page.setContent(htmlContent);
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+
+            byte[] pdfBytes = page.pdf(new Page.PdfOptions()
+                .setFormat("A4")
+                .setPrintBackground(true)
+                .setMargin(new Margin().setTop("10mm").setBottom("10mm").setLeft("10mm").setRight("10mm"))
+            );
+            browser.close();
+            return pdfBytes;
+        } catch (Exception e) {
+            log.error("❌ [PDF] HTML 변환 실패: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
     public byte[] generatePdfFromUrl(String url, Map<String, String> cookies) {
         String domain = "";
         String scheme = "http";

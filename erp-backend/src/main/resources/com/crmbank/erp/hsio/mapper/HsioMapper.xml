@@ -314,6 +314,18 @@
         exec hsio_990u_str #{actkind}, #{cmpycd}, #{slipkind}, #{deptcd}, #{fromdt}, #{todt}, #{cfmyn}, #{slipymd}, #{slipno}, #{updemp}
     </select>
 
+    <select id="HSIO_TRANS_STR" resultType="java.util.LinkedHashMap">
+        exec hsio_trans_str #{actkind}, #{cmpycd}, #{ioym}, #{iono}
+    </select>
+
+    <select id="HSIO_REQOUT_STR" resultType="java.util.LinkedHashMap">
+        exec hsio_reqout_str #{actkind}, #{cmpycd}, #{ioym}, #{iono}
+    </select>
+
+    <select id="HSIO_REQIN_STR" resultType="java.util.LinkedHashMap">
+        exec hsio_reqin_str #{actkind}, #{cmpycd}, #{ioym}, #{iono}
+    </select>
+
     <!-- 🚀 외부전표전송 상세 조회 (ASP SELECT문 이식) -->
     <select id="getSlipDetailsForTransfer" resultType="java.util.LinkedHashMap">
         SELECT A.SLIPYMD,  A.SLIPNO, B.SROWNO, B.ACCTCD,

@@ -33,7 +33,9 @@ public class EmailDto {
 	private String custnm; // 거래처 이름
 	private String email; // 보낼 메일 주소
 	private String name; //  거래처 담당자
-	private String no; // 과금번호 등
+	    private String no;
+    private String htmlcontent;
+ // 과금번호 등
 	private String url; // 첨부파일 URL
 	private String subject; // 메일 제목
 	private String scheduletype; // 예약구분

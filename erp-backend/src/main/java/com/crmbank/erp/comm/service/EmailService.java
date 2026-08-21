@@ -104,11 +104,17 @@ public class EmailService {
     }
 
     public int sendBal(EmailDto payload, String cmpycd, String sessionId, String fromEmail, String nacd, String userid) throws Exception {
-        Map<String, String> cookies = prepareCookies(sessionId);
         EmailSendHistoryDto historyDto = new EmailSendHistoryDto();
         String subject = String.format("[%s] 발주서 전달드립니다", BRAND_NAME);
         try {
-            byte[] pdfData = playwrightPdfService.generatePdfFromUrl(payload.getUrl(), cookies);
+            // 🚀 [개선] URL 대신 전달받은 HTML 콘텐츠가 있으면 우선 사용
+            byte[] pdfData;
+            if (payload.getHtmlcontent() != null && !payload.getHtmlcontent().isEmpty()) {
+                pdfData = playwrightPdfService.generatePdfFromHtml(payload.getHtmlcontent());
+            } else {
+                Map<String, String> cookies = prepareCookies(sessionId);
+                pdfData = playwrightPdfService.generatePdfFromUrl(payload.getUrl(), cookies);
+            }
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             Context context = new Context();

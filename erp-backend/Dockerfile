@@ -1,15 +1,15 @@
-# 1. 빌드 스테이지
-FROM gradle:8.5-jdk17 AS build
+# 1. 빌드 스테이지 (JDK 21 적용)
+FROM gradle:8.5-jdk21 AS build
 WORKDIR /app
 COPY . .
 RUN gradle bootJar --no-daemon
 
-# 2. 실행 스테이지
-FROM eclipse-temurin:17-jre
+# 2. 실행 스테이지 (JRE 21 적용)
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 
-# 서버 환경 설정 (서버로 이전 시 이 값들이 우선 적용됨)
+# 서버 환경 설정
 ENV SPRING_PROFILES_ACTIVE=prod
 ENV STORAGE_PATH=/app/storage
 

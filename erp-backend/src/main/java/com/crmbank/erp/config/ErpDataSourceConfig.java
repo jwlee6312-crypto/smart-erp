@@ -44,7 +44,7 @@ public class ErpDataSourceConfig {
         String port = env.getProperty("ERP_DB_PORT", "1433");
         String dbName = env.getProperty("ERP_DB_NAME", "SMARTDB");
         String username = env.getProperty("ERP_DB_USERNAME", "sa");
-        String password = env.getProperty("ERP_DB_PASSWORD", "crmbank");
+        String password = env.getProperty("ERP_DB_PASSWORD", "8221284sb!12#$");
         
         String jdbcUrl = String.format(
                 "jdbc:sqlserver://%s:%s;databaseName=%s;encrypt=false;trustServerCertificate=true;sendStringParametersAsUnicode=false;loginTimeout=30",

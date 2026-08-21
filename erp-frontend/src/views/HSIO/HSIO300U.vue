@@ -292,8 +292,8 @@ const updateRowStatus = (row: any) => {
 
 const calcTotals = () => {
   const data = grid2?.getData() || [];
-  amtTot.value = data.filter(d => d._status !== '삭제').reduce((acc, cur:any) => acc + (Number(cur.imamt) || 0), 0);
-  billTot.value = data.filter(d => d._status !== '삭제').reduce((acc, cur:any) => acc + (Number(cur.billamt) || 0), 0);
+  amtTot.value = data.filter(d => d._status !== '삭제').reduce((acc: number, cur: any) => acc + (Number(cur.imamt) || 0), 0);
+  billTot.value = data.filter(d => d._status !== '삭제').reduce((acc: number, cur: any) => acc + (Number(cur.billamt) || 0), 0);
 }
 
 /** 🚀 로컬 도움창 핸들러 */
@@ -438,7 +438,7 @@ async function fetchDetail(row: any) {
   Object.assign(form_02, row);
   form_02.imymd = formatDate(row.imymd);
   try {
-    const res = await api.post('/hsio/HSIO_300U_STR', { actkind: 'S1', imym: row.imym, imno: row.imno }));
+    const res = await api.post('/hsio/HSIO_300U_STR', { actkind: 'S1', imym: row.imym, imno: row.imno });
     const details = normalize(res.data).map(i => ({
       ...i,
       imtype: (i.imtype || i.imgbn || '').trim(),

@@ -13,7 +13,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MLKitBarcode"
+        android:theme="@style/Theme.SmartERP"
         android:usesCleartextTraffic="true">
 
         <activity
@@ -49,17 +49,9 @@
         <activity android:name="com.crmbank.erp.mobile.hsba.MHSBA070U" />
         <activity android:name="com.crmbank.erp.mobile.hsba.MHSBA900U" />
 
-        <!-- 🚀 영업활동 관리 (HSAA) -->
-        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA100U" />
-        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA110U" />
-        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA120U" />
-        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA130U" />
-        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA140U" />
-        <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA150U" />
         <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA200S" />
         <activity android:name="com.crmbank.erp.mobile.hsaa.MHSAA400U" />
         <activity android:name="com.crmbank.erp.mobile.haba.MHABA910U" />
-        <activity android:name="com.crmbank.erp.mobile.haba.MHABA920U" />
 
         <activity android:name="com.crmbank.erp.mobile.hsio.MHSIO010U" />
         <activity android:name="com.crmbank.erp.mobile.hsio.MHSIO052U" />

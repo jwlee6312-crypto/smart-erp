@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,16 +79,16 @@ public class CommService {
         Map<String, Object> param = new HashMap<>();
         param.put("cmpycd", cmpycd); param.put("userid", userid);
         param.put("upmucd", upmucd); param.put("usergrp", usergrp);
-        List<Map<String, Object>> list = commMapper.HA00_200S_STR(param);
-        if (list != null) {
-            for (int i = 0; i < list.size(); i++) {
-                Map<String, Object> row = list.get(i);
-                Map<String, Object> lowerRow = new HashMap<>();
-                row.forEach((k, v) -> lowerRow.put(k.toLowerCase(), v));
-                list.set(i, lowerRow);
+        
+        List<Map<String, Object>> rawList = commMapper.HA00_200S_STR(param);
+        List<Map<String, Object>> resultList = new ArrayList<>();
+        
+        if (rawList != null) {
+            for (Map<String, Object> row : rawList) {
+                resultList.add(normalize(row));
             }
         }
-        return list;
+        return resultList;
     }
 
     public List<Map<String, Object>> getProgramList(Map<String, Object> param) { return commMapper.GET_PROGRAM_LIST(param); }

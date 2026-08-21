@@ -3,6 +3,7 @@ package com.crmbank.erp.mobile;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -91,20 +92,28 @@ public class SubMenuActivity extends BaseActivity {
     }
 
     private void processAndGroupMenus(List<Map<String, Object>> rawList) {
+        if (rawList == null) return;
+        
         groupList.clear();
         Map<String, MenuHeader> groups = new LinkedHashMap<>();
 
         for (Map<String, Object> item : rawList) {
-            // 🚀 [조작 없음] DB에서 넘어온 모든 데이터(14건 등)를 그대로 수용
+            if (item == null) continue;
+            
             String grpcd = getStringVal(item, "grpcd");
-            if (grpcd.isEmpty()) grpcd = "ETC";
             String grpnm = getStringVal(item, "grpnm");
+            
+            if (grpcd.isEmpty()) grpcd = "ETC";
             if (grpnm.isEmpty()) grpnm = "기타 메뉴";
 
-            if (!groups.containsKey(grpcd)) {
-                groups.put(grpcd, new MenuHeader(grpnm));
+            try {
+                if (!groups.containsKey(grpcd)) {
+                    groups.put(grpcd, new MenuHeader(grpnm));
+                }
+                groups.get(grpcd).getItems().add(item);
+            } catch (Exception e) {
+                Log.e("SubMenu", "Error grouping menu: " + e.getMessage());
             }
-            groups.get(grpcd).getItems().add(item);
         }
 
         groupList.addAll(groups.values());

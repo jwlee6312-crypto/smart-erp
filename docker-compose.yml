@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 🚀 Smart ERP Backend
   smart-erp-backend:
@@ -22,7 +20,7 @@ services:
     build: ./erp-frontend
     container_name: smart-erp-frontend
     ports:
-      - "9000:80"
+      - "80:80"  # 💡 최신 도커로 포트 80 탈환
     depends_on:
       - smart-erp-backend
     restart: always

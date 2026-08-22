@@ -35,6 +35,9 @@ erp-mobileback-260120/
 .DS_Store
 Thumbs.db
 
+# Accidental folders
+D/
+
 # Deployment
 /tmp/
 *.log

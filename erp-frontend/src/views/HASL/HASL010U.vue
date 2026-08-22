@@ -633,7 +633,7 @@ const printSlip = async () => {
 
     try {
         // 1. 공통 설정 조회 (결재라인 등)
-        const companyRes = await api.post('/comm/HABA_100U_STR', { actkind: 'S0', cmpycd: authstore.cmpycd });
+        const companyRes = await api.post('/haba/HABA_100U_STR', { actkind: 'S0', cmpycd: authstore.cmpycd });
         const cInfo = companyRes.data?.[0] || {};
         const gLines = [];
         ['gline1', 'gline2', 'gline3', 'gline4', 'gline5'].forEach(k => {

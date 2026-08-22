@@ -27,6 +27,23 @@ public class CommController {
             UserSession user = commService.login(data.get("cmpycd"), data.get("userid"), data.get("passwd"), request.getRemoteAddr());
             HttpSession session = request.getSession(true);
             session.setAttribute("user_session", user);
+            
+            // 🚀 [보안/호환성] 개별 세션 속성 누락 없이 전체 바인딩
+            session.setAttribute("cmpycd", user.getCmpycd());
+            session.setAttribute("cmpynm", user.getCmpynm());
+            session.setAttribute("userid", user.getUserid());
+            session.setAttribute("usernm", user.getUsernm());
+            session.setAttribute("deptcd", user.getDeptcd());
+            session.setAttribute("deptnm", user.getDeptnm());
+            session.setAttribute("usergrp", user.getUsergrp());
+            session.setAttribute("email", user.getEmail());
+            session.setAttribute("hpno", user.getHpno());
+            session.setAttribute("inner_no", user.getInner_no());
+            session.setAttribute("salsyn", user.getSalsyn());
+            session.setAttribute("status", user.getStatus());
+            session.setAttribute("routing_mode", user.getRouting_mode());
+            session.setAttribute("photo_path", user.getPhoto_path());
+            
             return ResponseEntity.ok(user);
         } catch (Exception e) { 
             return ResponseEntity.badRequest().body(e.getMessage()); 

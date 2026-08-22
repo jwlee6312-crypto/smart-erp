@@ -187,11 +187,9 @@
     </select>
 
     <select id="HSIO_510U_STR" resultType="java.util.LinkedHashMap">
-        exec hsio_510u_str #{actkind}, #{cmpycd}, #{iogbn}, #{fromdt}, #{todt}, #{custcd}, #{deptcd}, #{ioym}, #{iono}, #{iorowno}, #{taxunit}, #{vattype}, #{jsanym}, #{jsanno}, #{jsanymd}, #{jsanqty}, #{jsanamt}, #{jsanvat}, #{updemp}
-    </select>
-
-    <select id="HSIO_511U_STR" resultType="java.util.LinkedHashMap">
-        exec hsio_511u_str #{actkind}, #{cmpycd}, #{iogbn}, #{yymm}, #{sungb}, #{custcd}, #{deptcd}, #{ioym}, #{iono}, #{iorowno}, #{taxunit}, #{vattype}, #{jsanym}, #{jsanno}, #{jsanymd}, #{jsanqty}, #{jsanamt}, #{jsanvat}, #{updemp}
+        exec hsio_510u_str #{actkind}, #{cmpycd}, #{iogbn}, #{fromdt}, #{todt}, #{custcd}, #{deptcd},
+        #{ioym}, #{iono}, #{iorowno}, #{taxunit}, #{vattype}, #{jsanym}, #{jsanno}, #{jsanymd},
+        #{jsanqty}, #{jsanamt}, #{jsanvat}, #{updemp}
     </select>
 
     <select id="HSIO_520U_STR" resultType="java.util.LinkedHashMap">

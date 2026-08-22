@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="UTF-8">
     <title>지 출 결 의 서</title>
@@ -47,7 +47,7 @@
         🖨️ Print
       </button>
     </div>
-    <div class="page" th:each="print : ${printList}">
+    <div class="page" data-th-each="print : ${printList}">
       <div class="d-flex">
         <div class="fs-1 fw-bold d-flex justify-content-center align-items-center" style="width: 60%">
           <span>지 출 결 의 서</span>
@@ -55,12 +55,12 @@
         <table class="table" style="width: 40%">
           <tr style="font-size: 12px">
             <th class="p-0" style="height: 100px; width: 20px; writing-mode: vertical-lr;" rowspan="2">결재</th>
-            <th class="px-1" style="height: 10px; font-size: 10px" th:each="gline : ${gLines}">
-              <span th:text="${gline}"></span>
+            <th class="px-1" style="height: 10px; font-size: 10px" data-th-each="gline : ${gLines}">
+              <span data-th-text="${gline}"></span>
             </th>
           </tr>
           <tr>
-            <td style="height: 70px; width: 70px;" th:each="gline : ${gLines}" ></td>
+            <td style="height: 70px; width: 70px;" data-th-each="gline : ${gLines}" ></td>
           </tr>
         </table>
       </div>
@@ -75,37 +75,37 @@
         <tr>
           <th>부서</th>
           <td>
-            <span th:text="${print.mst['deptnm']}"></span>
+            <span data-th-text="${print.mst['deptnm']}"></span>
           </td>
           <th>발의일자</th>
           <td>
-            <span th:text="${print.mst['jsanymd']}"></span>
+            <span data-th-text="${print.mst['jsanymd']}"></span>
           </td>
         </tr>
         <tr>
           <th>거래처명</th>
           <td>
-            <span th:text="${print.mst['custnm']}"></span>
+            <span data-th-text="${print.mst['custnm']}"></span>
           </td>
           <th>신청인</th>
           <td>
-            <span th:text="${print.mst['usernm']}"></span>
+            <span data-th-text="${print.mst['usernm']}"></span>
           </td>
         </tr>
         <tr>
           <th>계약명</th>
           <td>
-            <span th:text="${print.mst['contnm']}"></span>
+            <span data-th-text="${print.mst['contnm']}"></span>
           </td>
           <th>지급희망일</th>
           <td>
-            <span th:text="${print.mst['jsanymd']}"></span>
+            <span data-th-text="${print.mst['jsanymd']}"></span>
           </td>
         </tr>
         <tr>
           <th>금액</th>
           <td class="fw-bold text-end">
-            <span th:text="${#numbers.formatInteger(print.mst['totamt'], '0', 'COMMA')}"></span>
+            <span data-th-text="${#numbers.formatInteger(print.mst['totamt'], 0, 'COMMA')}"></span>
           </td>
           <th>지불조건</th>
           <td class="align-items-center align-middle p-1">
@@ -149,31 +149,31 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="details: ${print.dtl}">
+        <tr data-th-each="details: ${print.dtl}">
           <td>
-            <span th:text="${details['sales_custnm']}"></span>
-          </td>
-          <td>
-            <span th:text="${details['itemnm']}"></span>
+            <span data-th-text="${details['sales_custnm']}"></span>
           </td>
           <td>
-            <span th:text="${details['startymd']}"></span>
+            <span data-th-text="${details['itemnm']}"></span>
+          </td>
+          <td>
+            <span data-th-text="${details['startymd']}"></span>
           </td>
           <td class="text-end">
-            <span th:text="${#numbers.formatInteger(details['ioqty'], '0', 'COMMA')}"></span>
+            <span data-th-text="${#numbers.formatInteger(details['ioqty'], 0, 'COMMA')}"></span>
           </td>
           <td class="text-end">
-            <span th:text="${#numbers.formatInteger(details['ioamt'], '0', 'COMMA')}"></span>
+            <span data-th-text="${#numbers.formatInteger(details['ioamt'], 0, 'COMMA')}"></span>
           </td>
           <td class="text-end">
-            <span th:text="${#numbers.formatInteger(details['iovat'], '0', 'COMMA')}"></span>
+            <span data-th-text="${#numbers.formatInteger(details['iovat'], 0, 'COMMA')}"></span>
           </td>
           <td class="text-end">
-            <span th:text="${#numbers.formatInteger(details['totamt'], '0', 'COMMA')}"></span>
+            <span data-th-text="${#numbers.formatInteger(details['totamt'], 0, 'COMMA')}"></span>
           </td>
         </tr>
-        <tr th:if="${print.dtl.size() < 17}" th:each="tableRows : ${#numbers.sequence(1, 17 - print.dtl.size())}">
-          <td th:each="tableDatas : ${#numbers.sequence(1, 7)}" style="height: 32px;"></td>
+        <tr data-th-if="${print.dtl.size() < 17}" data-th-each="tableRows : ${#numbers.sequence(1, 17 - print.dtl.size())}">
+          <td data-th-each="tableDatas : ${#numbers.sequence(1, 7)}" style="height: 32px;"></td>
         </tr>
         </tbody>
         <tfoot>
@@ -182,16 +182,16 @@
             <span>합계</span>
           </td>
           <td class="fw-bold text-end">
-            <span th:text="${#numbers.formatInteger(print.mst['sumQty'], '0', 'COMMA')}"></span>
+            <span data-th-text="${#numbers.formatInteger(print.mst['sumQty'], 0, 'COMMA')}"></span>
           </td>
           <td class="fw-bold text-end">
-            <span th:text="${#numbers.formatInteger(print.mst['sumAmt'], '0', 'COMMA')}"></span>
+            <span data-th-text="${#numbers.formatInteger(print.mst['sumAmt'], 0, 'COMMA')}"></span>
           </td>
           <td class="fw-bold text-end">
-            <span th:text="${#numbers.formatInteger(print.mst['sumVat'], '0', 'COMMA')}"></span>
+            <span data-th-text="${#numbers.formatInteger(print.mst['sumVat'], 0, 'COMMA')}"></span>
           </td>
           <td class="fw-bold text-end">
-            <span>₩ <span th:text="${#numbers.formatInteger(print.mst['totamt'], '0', 'COMMA')}"></span></span>
+            <span>₩ <span data-th-text="${#numbers.formatInteger(print.mst['totamt'], 0, 'COMMA')}"></span></span>
           </td>
         </tr>
         </tfoot>

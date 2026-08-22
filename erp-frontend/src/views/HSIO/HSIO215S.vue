@@ -188,14 +188,13 @@ const printInboundSheet = async () => {
         const [hRes, dRes, companyRes, stampRes] = await Promise.all([
             api.post('/hsio/HSIO_REQIN_STR', { actkind: 'S1', cmpycd: authStore.cmpycd, ioym: m.ioym, iono: m.iono }),
             api.post('/hsio/HSIO_REQIN_STR', { actkind: 'S0', cmpycd: authStore.cmpycd, ioym: m.ioym, iono: m.iono }),
-            api.post('/comm/HABA_900U_STR', { actkind: 'S0', cmpycd: authStore.cmpycd }),
-            api.post('/comm/HABA_100U_STR', { actkind: 'S0', cmpycd: authStore.cmpycd })
+            api.post('/haba/HABA_900U_STR', { actkind: 'S0', cmpycd: authStore.cmpycd }),
+            api.post('/haba/HABA_100U_STR', { actkind: 'S0', cmpycd: authStore.cmpycd })
         ])
 
         if (!hRes.data?.length) return vAlertError('입고의뢰 정보를 찾을 수 없습니다.')
         const h = hRes.data[0]
         const dtl = dRes.data || []
-        const our = companyRes.data?.[0] || {}
         const sInfo = stampRes.data?.[0] || {}
 
         // 결재라인 추출
@@ -204,30 +203,40 @@ const printInboundSheet = async () => {
             const val = String(sInfo[key] || '').trim();
             if (val) gLines.push(val);
         });
-        const gWidth = gLines.length === 5 ? 45 : (gLines.length === 4 ? 40 : (gLines.length === 3 ? 33 : 24));
+        if (gLines.length === 0) gLines.push('담 당', '팀 장', '부 장', '사 장');
 
         const fC = (n: any) => Number(n || 0).toLocaleString()
+        const fSaup = (v: any) => {
+            const s = String(v || '').replace(/[^0-9]/g, '');
+            return s.length === 10 ? `${s.substring(0,3)}-${s.substring(3,5)}-${s.substring(5)}` : s;
+        }
+
+        const fDate = (v: any) => {
+            const s = String(v || '').replace(/[^0-9]/g, '');
+            return s.length === 8 ? `${s.substring(0,4)}-${s.substring(4,6)}-${s.substring(6,8)}` : v;
+        }
+
         let rowsHtml = ''
         let qtysum = 0, amtsum = 0
 
-        for (let i = 0; i < Math.max(dtl.length, 25); i++) {
+        for (let i = 0; i < Math.max(dtl.length, 15); i++) {
             const item = dtl[i] || {}
             if (item.itemnm) {
                 const qty = Number(item.ioqty || 0); const amt = Number(item.ioamt || 0);
                 qtysum += qty; amtsum += amt;
                 rowsHtml += `
-                <tr height="25">
-                    <td align="center">${i + 1}</td>
-                    <td align="center">${item.itemcd || ''}</td>
-                    <td align="left" style="padding-left:3px;">${item.itemnm}</td>
-                    <td align="center">${item.itsize || ''}</td>
-                    <td align="center">${item.unit || ''}</td>
-                    <td align="right" style="padding-right:3px;">${fC(qty)}</td>
-                    <td align="right" style="padding-right:3px;">${fC(qty > 0 ? amt/qty : 0)}</td>
-                    <td align="right" style="padding-right:3px;">${fC(amt)}</td>
+                <tr height="28">
+                    <td class="text-center" style="font-size:8.5pt;">${i + 1}</td>
+                    <td class="text-center" style="font-size:8.5pt;">${item.itemcd || ''}</td>
+                    <td class="text-left" style="padding-left:3px; font-size:8.5pt;">${String(item.itemnm || '').trim()}</td>
+                    <td class="text-left" style="padding-left:3px; font-size:8.5pt;">${String(item.itsize || '').trim()}</td>
+                    <td class="text-center" style="font-size:8.5pt;">${item.unit || ''}</td>
+                    <td class="text-right" style="padding-right:3px; font-size:8.5pt;">${fC(qty)}</td>
+                    <td class="text-right" style="padding-right:3px; font-size:8.5pt;">${fC(qty > 0 ? amt/qty : 0)}</td>
+                    <td class="text-right" style="padding-right:3px; font-size:8.5pt;">${fC(amt)}</td>
                 </tr>`
             } else {
-                rowsHtml += `<tr height="25"><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>`
+                rowsHtml += `<tr height="28"><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>`
             }
         }
 
@@ -237,74 +246,98 @@ const printInboundSheet = async () => {
             <title>입고의뢰서</title>
             <style>
                 body { font-family: 'GulimChe', '굴림체', sans-serif; color: black; margin: 0; padding: 10px; }
-                table { border-collapse: collapse; font-size: 9pt; width: 650px; }
-                th, td { border: 1px solid #BDBDBD; padding: 2px; }
+                table { border-collapse: collapse; font-size: 8.5pt; width: 650px; margin: 0 auto; table-layout: fixed; }
+                th, td { border: 1px solid #BDBDBD; padding: 2px; text-align: center; }
                 .title-font { font-size: 20pt; font-weight: bold; }
-                .bg-gray { background-color: #F8F8F8; }
+                .bg-eee { background-color: #eee; }
+                .text-left { text-align: left !important; }
+                .text-right { text-align: right !important; }
+                .text-center { text-align: center !important; }
             </style>
         </head>
         <body onload="window.print()">
-            <table width="650" border="0" cellspacing="0" cellpadding="0" style="border:0">
+            <table border="0" style="border:0; height:72px; margin-bottom:10px;">
                 <tr>
-                    <td width="${100-gWidth}%" align="center" style="border:0"><span class="title-font">입&nbsp;&nbsp;고&nbsp;&nbsp;의&nbsp;&nbsp;뢰&nbsp;&nbsp;서</span></td>
-                    <td width="${gWidth}%" valign="top" style="border:0">
-                        <table width="100%" border="1">
+                    <td width="350px" align="center" style="font-size:20pt; font-weight:bold; vertical-align:middle; border:0;">입&nbsp;&nbsp;고&nbsp;&nbsp;의&nbsp;&nbsp;뢰&nbsp;&nbsp;서</td>
+                    <td width="300px" align="right" valign="top" style="border:0;">
+                        <table border="1" style="width:100%; border-collapse:collapse; height:72px;">
                             <tr>
-                                <td bgcolor="#EEEEEE" rowspan="2" width="15%" align="center">결재</td>
-                                ${gLines.map(g => \`<td bgcolor="#EEEEEE" align="center" height="20">\${g}</td>\`).join('')}
+                                <td rowspan="2" width="20px" class="bg-eee" style="font-size:10pt; line-height:1.2;">결<br>재</td>
+                                ${gLines.map(g => `<td class="bg-eee" height="20" style="font-size:8.5pt;">${g}</td>`).join('')}
                             </tr>
-                            <tr>${gLines.map(() => `<td height="52" width="60">&nbsp;</td>`).join('')}</tr>
+                            <tr>${gLines.map(() => '<td height="52" width="55"></td>').join('')}</tr>
                         </table>
                     </td>
                 </tr>
             </table>
-            <table width="650" border="1" style="margin-top:10px">
+
+            <table border="1" style="width:650px; margin:0 auto; border-collapse:collapse;">
+                <colgroup><col style="width:12%"/><col style="width:38%"/><col style="width:12%"/><col style="width:38%"/></colgroup>
                 <tr height="25">
-                    <td width="70" class="bg-gray" align="center">입고번호</td><td colspan="3" align="left">&nbsp;${h.ioym}-${h.iono}</td>
-                    <td width="70" class="bg-gray" align="center">회 사 명</td><td colspan="3" align="center"><b>${h.ccustnm || ''}</b></td>
+                    <td class="bg-eee">입고번호</td><td class="text-left">&nbsp;${h.ioym || m.ioym}-${h.iono || m.iono}</td>
+                    <td class="bg-eee">회 사 명</td><td class="text-center"><b>${h.ccustnm || ''}</b></td>
                 </tr>
                 <tr height="25">
-                    <td class="bg-gray" align="center">입고일자</td><td colspan="3" align="left">&nbsp;${h.ioymd}</td>
-                    <td class="bg-gray" align="center">등록번호</td><td colspan="3" align="center">&nbsp;${h.ccustno || ''}</td>
+                    <td class="bg-eee">입고일자</td><td class="text-left">&nbsp;${fDate(h.ioymd)}</td>
+                    <td class="bg-eee">등록번호</td><td class="text-center">&nbsp;${fSaup(h.ccustno)}</td>
                 </tr>
                 <tr height="25">
-                    <td class="bg-gray" align="center">입고창고</td><td colspan="3" align="left">&nbsp;${h.whnm || ''}</td>
-                    <td class="bg-gray" align="center">소 재 지</td><td colspan="3" align="center">&nbsp;${h.caddress || ''}</td>
+                    <td class="bg-eee">입고창고</td><td class="text-left">&nbsp;${h.whnm || ''}</td>
+                    <td class="bg-eee">소 재 지</td><td class="text-center" style="font-size:8pt;">&nbsp;${h.caddress || ''}</td>
                 </tr>
                 <tr height="25">
-                    <td class="bg-gray" align="center">입고부서</td><td colspan="3" align="left">&nbsp;${h.deptnm || ''}</td>
-                    <td class="bg-gray" align="center">전화번호</td><td align="center">${h.ctelno || ''}</td>
-                    <td class="bg-gray" align="center" width="60">팩스번호</td><td align="center">${h.cfaxno || ''}</td>
+                    <td class="bg-eee">입고부서</td><td class="text-left">&nbsp;${h.deptnm || ''}</td>
+                    <td class="bg-eee" style="padding:0;">
+                        <div style="display:flex; height:100%;">
+                            <div style="flex:1; border-right:1px solid #BDBDBD; display:flex; align-items:center; justify-content:center;">전&nbsp;&nbsp;&nbsp;&nbsp;화</div>
+                            <div style="flex:1; display:flex; align-items:center; justify-content:center;">팩&nbsp;&nbsp;&nbsp;&nbsp;스</div>
+                        </div>
+                    </td>
+                    <td style="padding:0;">
+                        <div style="display:flex; height:100%;">
+                            <div style="flex:1; border-right:1px solid #BDBDBD; display:flex; align-items:center; justify-content:center;">${h.ctelno || ''}</div>
+                            <div style="flex:1; display:flex; align-items:center; justify-content:center;">${h.cfaxno || ''}</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr height="25">
-                    <td class="bg-gray" align="center">담당자명</td><td colspan="3" align="left">&nbsp;${h.usernm || ''} (인)</td>
-                    <td class="bg-gray" align="center">담당자명</td><td colspan="3" align="center">&nbsp;${h.cdamdang || ''}</td>
+                    <td class="bg-eee">담당자명</td><td align="left">&nbsp;${h.usernm || ''} (인)</td>
+                    <td class="bg-eee">담당자명</td><td align="center">&nbsp;${h.cdamdang || ''}</td>
                 </tr>
                 <tr height="25">
-                    <td class="bg-gray" align="center">입고구분</td><td colspan="3" align="left">&nbsp;${h.iotypenm || ''}</td>
-                    <td class="bg-gray" align="center">담당연락처</td><td colspan="3" align="center">${h.ctelno || ''}</td>
+                    <td class="bg-eee">입고구분</td><td align="left">&nbsp;${h.iotypenm || ''}</td>
+                    <td class="bg-eee">담당연락처</td><td align="center">${h.ctelno || ''}</td>
                 </tr>
-                <tr height="25"><td class="bg-gray" align="center">특기사항</td><td colspan="7" align="left">&nbsp;${h.remark || ''}</td></tr>
+                <tr height="25"><td class="bg-eee">특기사항</td><td colspan="3" align="left">&nbsp;${h.remark || ''}</td></tr>
             </table>
-            <table width="650" border="1" style="margin-top:5px">
-                <tr class="bg-gray" height="25">
-                    <td width="5%" align="center">No.</td><td width="10%" align="center">품 목</td><td width="35%" align="center">품 목 명</td><td width="8%" align="center">규 격</td>
-                    <td width="6%" align="center">단위</td><td width="12%" align="center">수 량</td><td width="12%" align="center">단 가</td><td width="12%" align="center">금 액</td>
-                </tr>
-                ${rowsHtml}
-                <tr height="25" style="font-weight:bold">
-                    <td align="center" colspan="5">합 계</td>
-                    <td align="right" style="padding-right:3px;">${fC(qtysum)}</td>
-                    <td>&nbsp;</td>
-                    <td align="right" style="padding-right:3px;">${fC(amtsum)}</td>
-                </tr>
+
+            <table border="1" style="width:650px; margin:5px auto 0 auto; border-collapse:collapse;">
+                <colgroup>
+                    <col style="width:5%"/><col style="width:12%"/><col style="width:33%"/><col style="width:10%"/><col style="width:6%"/><col style="width:11%"/><col style="width:11%"/><col style="width:12%"/>
+                </colgroup>
+                <thead>
+                    <tr class="bg-eee" height="28">
+                        <td>No.</td><td>품 목</td><td>품 목 명</td><td>규 격</td><td>단위</td><td>수 량</td><td>단 가</td><td>금 액</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+                <tfoot>
+                    <tr height="28" style="font-weight:bold" class="bg-eee">
+                        <td class="text-center" colspan="5">합 계</td>
+                        <td class="text-right" style="padding-right:3px;">${fC(qtysum)}</td>
+                        <td>&nbsp;</td>
+                        <td class="text-right" style="padding-right:3px;">${fC(amtsum)}</td>
+                    </tr>
+                </tfoot>
             </table>
         </body>
-        </html>\`
+        </html>`;
 
-        const win = window.open('', '_blank', 'width=800,height=900')
-        win?.document.write(html)
-        win?.document.close()
+        const win = window.open('', '_blank', 'width=800,height=900');
+        win?.document.write(html);
+        win?.document.close();
     } catch (e) { vAlertError('입고의뢰서 출력 실패') }
 }
 

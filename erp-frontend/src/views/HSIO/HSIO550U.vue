@@ -306,83 +306,56 @@ const save = async () => {
         const outQty = Number(item.ioqty) || 0;
         const outAmt = Math.round((Number(item.ordamt) / ordQty) * outQty);
         const outVat = Math.round((Number(item.ordvat) / ordQty) * outQty);
-        return { ...item, outqty: outQty, outamt: outAmt, outvat: outVat };
+        return {
+            ...item,
+            ioqty: outQty,
+            ioamt: outAmt,
+            iovat: outVat,
+            balym: item.ordym || item.ORDYM || '',
+            balno: item.ordno || item.ORDNO || '',
+            browno: item.orowno || item.OROWNO || ''
+        };
     });
 
-    const totalAmtSum = detailItems.reduce((acc, cur) => acc + cur.outamt, 0);
+    const totalAmtSum = detailItems.reduce((acc, cur) => acc + cur.ioamt, 0);
 
-    const masterParams = {
-        actkind: 'A0', cmpycd: authStore.cmpycd || '', iogbn: '200',
-        fromdt: (searchParam.fromdt || '').replace(/-/g, ''),
-        todt: (searchParam.todt || '').replace(/-/g, ''),
-        custcd: masterData.custcd || '',
-        deptcd: authStore.deptcd || '',
-        ioym: '', iono: '',
-        ioymd: ioymd || '',
-        iotype: '100',
-        whcd: masterData.whcd || '',
-        area: masterData.area || '',
-        userid: authStore.userid || '',
-        trnemp: masterData.trnemp || '',
-        trancd: masterData.trancd || '',
-        addres: masterData.address || '', // 🚀 addres 매핑
-        remark: masterData.remark || '',
-        cfmyn: 'Y',
-        totsum: totalAmtSum || 0,
-        updemp: authStore.userid || ''
-    }
-    // 🚀 [Seed-Model 표준 루틴] Step 1. 마스터 저장 실행
-    const resMst = await api.post('/hsio/HSIO_550U_STR', masterParams);
-    const mstData = resMst.data?.[0];
-    console.log('📦 [Seed-Model] Master Save Result:', mstData);
-
-    // 🚀 [Seed-Model 표준 루틴] Step 2. 무결성 키 추출 (오직 알리아스 기반)
-    const key1 = (mstData?.ioym || '').toString().trim();
-    const key2 = (mstData?.iono || '').toString().trim();
-
-    // 🚀 [Seed-Model 표준 루틴] Step 3. 에러 판별 (result='Y' 또는 약속된 에러코드)
-    if (mstData?.result === 'Y' || key1 === '000000') {
-        throw new Error(mstData?.msg || key2 || '업무 규칙 위반으로 저장할 수 없습니다.');
-    }
-
-    if (!key1 || !key2) {
-        throw new Error(`전표 번호 수신 실패! (알리아스 ioym, iono 확인 필요)`);
-    }
-
-    console.log(`🎯 최종 키 결정 -> key1: [${key1}], key2: [${key2}]`);
-
-    // 🚀 [Seed-Model 표준 루틴] Step 4. 상세 내역 연결 저장 (A0 루프)
-    for (const item of detailItems) {
-        const detailParams = {
-            actkind: 'A0', cmpycd: authStore.cmpycd || '', iogbn: '200',
-            ioym: key1 || '', iono: key2 || '', // 🚀 마스터에서 받은 키 재사용 확인
-            iorowno: '',
-            deptcd: item.deptcd || authStore.deptcd || '',
+    const saveRequest = {
+        mst: {
+            actkind: 'A0',
+            cmpycd: authStore.cmpycd || '',
+            iogbn: '200',
             custcd: masterData.custcd || '',
-            whcd: masterData.whcd || '',
-            area: masterData.area || '',
-            userid: item.ordemp || authStore.userid || '',
+            deptcd: authStore.deptcd || '',
             ioymd: ioymd || '',
             iotype: '100',
-            itemcd: item.itemcd || '',
-            itsize: item.itsize || '',
-            unit: item.unit || '',
-            ioqty: item.outqty || 0,
-            ioamt: item.outamt || 0,
-            iovat: item.outvat || 0,
-            balym: item.ordym || '',
-            balno: item.ordno || '',
-            browno: item.orowno || '',
+            whcd: masterData.whcd || '',
+            area: masterData.area || '',
+            userid: authStore.userid || '',
+            trnemp: masterData.trnemp || '',
+            trancd: masterData.trancd || '',
+            addres: masterData.address || '',
+            d_address: masterData.d_address || '',
+            remark: masterData.remark || '',
             cfmyn: 'Y',
+            totsum: totalAmtSum || 0,
             updemp: authStore.userid || ''
-        }
-        const resDtl = await api.post('/hsio/HSIO_551U_STR', detailParams);
-        console.log(`📝 상세 저장 완료: ${item.itemnm} (${key1}-${key2})`);
+        },
+        dtl: detailItems
     }
+
+    // 🚀 [Seed-Model 표준 루틴] 통합 저장 API 호출 (백엔드 서비스 단에서 무결성 보장)
+    const res = await api.post('/hsio/HSIO_550U_SAVE', saveRequest);
+
+    // ApiResponse 표준 처리
+    const resData = res.data?.data || res.data;
+    const key1 = (resData?.ioym || resData?.IOYM || '').toString().trim();
+    const key2 = (resData?.iono || resData?.IONO || '').toString().trim();
 
     vAlert(`출고 처리가 완료되었습니다.\n[출고번호: ${key1}-${key2}]`);
     fetchCustList(); initialize();
-  } catch (e: any) { vAlertError(e.message || '저장 실패'); }
+  } catch (e: any) {
+    vAlertError(e.response?.data?.message || e.message || '저장 실패');
+  }
 }
 
 const toggleAllRows = () => {

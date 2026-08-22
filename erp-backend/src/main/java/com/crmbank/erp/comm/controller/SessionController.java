@@ -35,6 +35,7 @@ public class SessionController {
     public ResponseEntity<Map<String, Object>> getSessionInfo(HttpSession session) {
         Map<String, Object> response = new HashMap<>();
         response.put("cmpycd", session.getAttribute("cmpycd"));
+        response.put("cmpynm", session.getAttribute("cmpynm")); // 🚀 회사명 추가
         response.put("nacd", session.getAttribute("nacd"));
         response.put("userid", session.getAttribute("userid"));
         response.put("usernm", session.getAttribute("usernm"));

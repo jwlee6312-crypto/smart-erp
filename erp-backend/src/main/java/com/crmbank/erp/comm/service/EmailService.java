@@ -105,9 +105,9 @@ public class EmailService {
 
     public int sendBal(EmailDto payload, String cmpycd, String sessionId, String fromEmail, String nacd, String userid) throws Exception {
         EmailSendHistoryDto historyDto = new EmailSendHistoryDto();
-        String subject = String.format("[%s] 발주서 전달드립니다", BRAND_NAME);
+        String senderName = (payload.getFromnm() != null && !payload.getFromnm().isEmpty()) ? payload.getFromnm() : BRAND_NAME;
+        String subject = String.format("[%s] 발주서 전달드립니다", senderName);
         try {
-            // 🚀 [개선] URL 대신 전달받은 HTML 콘텐츠가 있으면 우선 사용
             byte[] pdfData;
             if (payload.getHtmlcontent() != null && !payload.getHtmlcontent().isEmpty()) {
                 pdfData = playwrightPdfService.generatePdfFromHtml(payload.getHtmlcontent());
@@ -121,7 +121,7 @@ public class EmailService {
             context.setVariable("custnm", payload.getCustnm());
             String html = templateEngine.process("order/purchase-mail", context);
             helper.setText(html, true);
-            helper.setFrom(FIXED_FROM_EMAIL, BRAND_NAME);
+            helper.setFrom(FIXED_FROM_EMAIL, senderName); // 🚀 [개선] 회사명으로 발신자명 설정
             helper.setTo(payload.getEmail());
             helper.setSubject(subject);
             helper.addAttachment("발주서.pdf", new ByteArrayResource(pdfData));

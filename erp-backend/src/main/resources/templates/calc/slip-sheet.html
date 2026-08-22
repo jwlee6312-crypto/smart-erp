@@ -33,7 +33,6 @@
         <button class="btn btn-sm btn-outline-dark" onclick="window.print()">🖨️ 인쇄하기</button>
     </div>
 
-    <!-- 전표 데이터 출력 (페이징 처리는 단순화를 위해 단일 페이지 또는 테이블 흐름으로 구성) -->
     <div class="print-area">
         <div class="title-area">
             <div class="title-text">회 계 전 표</div>
@@ -51,21 +50,21 @@
         <table class="info-table">
             <tr>
                 <th class="bg-gray">전표번호</th>
-                <td th:text="${master['SLIPYMD'] + '-' + master['SLIPNO']}"></td>
+                <td data-th-text="${master['SLIPYMD'] + '-' + master['SLIPNO']}"></td>
                 <th class="bg-gray">회계일자</th>
-                <td th:text="${#strings.length(master['ACCTYMD']) == 8 ? #strings.substring(master['ACCTYMD'],0,4)+'년 '+#strings.substring(master['ACCTYMD'],4,6)+'월 '+#strings.substring(master['ACCTYMD'],6,8)+'일' : ''}"></td>
+                <td data-th-text="${#strings.length(master['ACCTYMD'] ?: '') == 8 ? #strings.substring(master['ACCTYMD'],0,4)+'년 '+#strings.substring(master['ACCTYMD'],4,6)+'월 '+#strings.substring(master['ACCTYMD'],6,8)+'일' : ''}"></td>
                 <th class="bg-gray" rowspan="2">작 성 자</th>
-                <td rowspan="2" th:text="${master['USERNM'] + ' (인)'}"></td>
+                <td rowspan="2" data-th-text="${(master['USERNM'] ?: '') + ' (인)'}"></td>
             </tr>
             <tr>
                 <th class="bg-gray">발행부서</th>
-                <td th:text="${master['DEPTNM']}"></td>
+                <td data-th-text="${master['DEPTNM']}"></td>
                 <th class="bg-gray">작성일자</th>
-                <td th:text="${#strings.length(master['SLIPYMD']) == 8 ? #strings.substring(master['SLIPYMD'],0,4)+'년 '+#strings.substring(master['SLIPYMD'],4,6)+'월 '+#strings.substring(master['SLIPYMD'],6,8)+'일' : ''}"></td>
+                <td data-th-text="${#strings.length(master['SLIPYMD'] ?: '') == 8 ? #strings.substring(master['SLIPYMD'],0,4)+'년 '+#strings.substring(master['SLIPYMD'],4,6)+'월 '+#strings.substring(master['SLIPYMD'],6,8)+'일' : ''}"></td>
             </tr>
             <tr>
                 <th class="bg-gray">거래내역</th>
-                <td colspan="3" class="text-start" th:text="${'&nbsp;' + master['BUSINESS']}"></td>
+                <td colspan="3" class="text-start" data-th-text="${'&nbsp;' + (master['BUSINESS'] ?: '')}"></td>
                 <th class="bg-gray">지출예정일</th>
                 <td></td>
             </tr>
@@ -87,29 +86,29 @@
             <tbody>
                 <th:block th:each="row, iter : ${details}">
                     <tr>
-                        <td rowspan="2" th:text="${row['SROWNO']}"></td>
+                        <td rowspan="2" data-th-text="${row['SROWNO']}"></td>
                         <td rowspan="2" class="text-start">
-                            <span th:text="${row['ACCTNM']}"></span><br/>
-                            <small th:text="${row['ACCTCD']}"></small>
+                            <span data-th-text="${row['ACCTNM']}"></span><br/>
+                            <small data-th-text="${row['ACCTCD']}"></small>
                         </td>
-                        <td class="text-start" th:text="${row['REMARK']}"></td>
-                        <td class="text-end" th:text="${row['DBAMT'] > 0 ? #numbers.formatInteger(row['DBAMT'], 0, 'COMMA') : ''}"></td>
-                        <td class="text-end" th:text="${row['CRAMT'] > 0 ? #numbers.formatInteger(row['CRAMT'], 0, 'COMMA') : ''}"></td>
+                        <td class="text-start" data-th-text="${row['REMARK']}"></td>
+                        <td class="text-end" data-th-text="${(row['DBAMT'] ?: 0) > 0 ? #numbers.formatInteger(row['DBAMT'], 0, 'COMMA') : ''}"></td>
+                        <td class="text-end" data-th-text="${(row['CRAMT'] ?: 0) > 0 ? #numbers.formatInteger(row['CRAMT'], 0, 'COMMA') : ''}"></td>
                     </tr>
                     <tr>
                         <td colspan="3" class="sub-detail">
-                            <span th:if="${row['DEPTNM'] != null}" th:text="${row['DEPTNM'] + ' | '}"></span>
-                            <span th:if="${row['CUSTNM'] != null}" th:text="${row['CUSTNM'] + ' | '}"></span>
-                            <span th:if="${row['MGTNO'] != null}" th:text="${row['MGTNO'] + ' | '}"></span>
-                            <span th:if="${row['PRJNM'] != null}" th:text="${row['PRJNM'] + ' | '}"></span>
-                            <span th:if="${row['BILLGBNNM'] != null}" th:text="${row['BILLGBNNM']}"></span>
+                            <span data-th-if="${row['DEPTNM'] != null}" data-th-text="${row['DEPTNM'] + ' | '}"></span>
+                            <span data-th-if="${row['CUSTNM'] != null}" data-th-text="${row['CUSTNM'] + ' | '}"></span>
+                            <span data-th-if="${row['MGTNO'] != null}" data-th-text="${row['MGTNO'] + ' | '}"></span>
+                            <span data-th-if="${row['PRJNM'] != null}" data-th-text="${row['PRJNM'] + ' | '}"></span>
+                            <span data-th-if="${row['BILLGBNNM'] != null}" data-th-text="${row['BILLGBNNM']}"></span>
                         </td>
                     </tr>
                 </th:block>
                 <!-- 빈 행 추가 (10행 맞춤) -->
-                <th:block th:if="${details.size() < 10}" th:each="i : ${#numbers.sequence(details.size() + 1, 10)}">
+                <th:block th:if="${(details != null ? details.size() : 0) < 10}" th:each="i : ${#numbers.sequence((details != null ? details.size() : 0) + 1, 10)}">
                     <tr>
-                        <td rowspan="2" th:text="${i}"></td>
+                        <td rowspan="2" data-th-text="${i}"></td>
                         <td rowspan="2"></td>
                         <td></td>
                         <td></td>
@@ -123,13 +122,13 @@
             <tfoot>
                 <tr class="bg-gray fw-bold">
                     <td colspan="3">합 계</td>
-                    <td class="text-end" th:text="${#numbers.formatInteger(totalDbAmt, 0, 'COMMA')}"></td>
-                    <td class="text-end" th:text="${#numbers.formatInteger(totalCrAmt, 0, 'COMMA')}"></td>
+                    <td class="text-end" data-th-text="${#numbers.formatInteger(totalDbAmt ?: 0, 0, 'COMMA')}"></td>
+                    <td class="text-end" data-th-text="${#numbers.formatInteger(totalCrAmt ?: 0, 0, 'COMMA')}"></td>
                 </tr>
             </tfoot>
         </table>
 
-        <!-- 하단 의견란 및 원인 정보 (ASP 재현) -->
+        <!-- 하단 의견란 및 원인 정보 -->
         <div class="row g-0">
             <div class="col-7">
                 <table style="width: 98%;">
@@ -153,7 +152,7 @@
         </div>
 
         <div class="d-flex justify-content-between mt-3" style="font-size: 9pt;">
-            <div th:text="${company['CMPYNM']}"></div>
+            <div data-th-text="${company != null ? company['CMPYNM'] : ''}"></div>
             <div>Printed by ERP System</div>
         </div>
     </div>

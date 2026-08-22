@@ -10,6 +10,7 @@ export const useAuthStore = defineStore(
 		const isAuthenticated = ref<boolean>(false)
 
 		const cmpycd = ref<string>('')
+		const cmpynm = ref<string>('') // 🚀 회사명 필드 추가
 		const userid = ref<string>('')
 		const usernm = ref<string>('')
 		const inner_no = ref<string>('')
@@ -27,6 +28,7 @@ export const useAuthStore = defineStore(
 			if (!data) return;
 			console.log('👤 로그인 사용자 정보:', data); // 🚀 데이터 구조 확인용
 			cmpycd.value = data.cmpycd || ''
+			cmpynm.value = data.cmpynm || '' // 🚀 회사명 매핑
 			userid.value = String(data.userid || '').trim()
 			usernm.value = String(data.usernm || '').trim()
 			inner_no.value = String(data.inner_no || '').trim()
@@ -98,6 +100,7 @@ export const useAuthStore = defineStore(
 		function resetState() {
 			isAuthenticated.value = false
 			cmpycd.value = ''
+			cmpynm.value = ''
 			userid.value = ''
 			usernm.value = ''
 			inner_no.value = ''
@@ -111,7 +114,7 @@ export const useAuthStore = defineStore(
 
 		return {
 			isAuthenticated,
-			cmpycd, userid, usernm, inner_no, deptcd, deptnm, usergrp, salsyn, email, photo_path,
+			cmpycd, cmpynm, userid, usernm, inner_no, deptcd, deptnm, usergrp, salsyn, email, photo_path,
 			login, logout, resetState, checkSession, setUserInfo
 		}
 	},

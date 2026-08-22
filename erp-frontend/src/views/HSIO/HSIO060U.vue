@@ -218,19 +218,43 @@ async function save() {
   const payload = {
     mst: {
       cmpycd: authStore.cmpycd,
+      iogbn: '100',
       custcd: formData.custcd,
       whcd: formData.whcd,
-      ioymd: formData.ioymd,
+      ioymd: formData.ioymd.replace(/-/g, ''),
+      ioym: formData.ioymd.replace(/-/g, '').substring(0, 6),
+      deptcd: searchForm.deptcd,
+      iotype: '100',
       remark: formData.remark,
       fromdt: searchForm.fromdt,
       todt: searchForm.todt,
       search_deptcd: searchForm.deptcd
     },
-    items: selectedItems.map(item => ({
-      ...item,
-      // 🚀 데이터에 포함된 발주부서(deptcd)를 그대로 서버로 전달
-      deptcd: item.deptcd
-    }))
+    items: selectedItems.map(item => {
+      const bQty = Number(item.balqty || 0)
+      const bAmt = Number(item.balamt || 0)
+      const bVat = Number(item.balvat || 0)
+      const iQty = Number(item.ioqty || 0)
+
+      let ioamt = 0, iovat = 0
+      if (bQty > 0) {
+        ioamt = Math.round((bAmt / bQty) * iQty)
+        iovat = Math.round((bVat / bQty) * iQty)
+      }
+
+      return {
+        ...item,
+        ioamt,
+        iovat,
+        iogbn: '100',
+        custcd: formData.custcd,
+        iotype: '100',
+        whcd: formData.whcd,
+        ioymd: formData.ioymd.replace(/-/g, ''),
+        ioym: formData.ioymd.replace(/-/g, '').substring(0, 6),
+        deptcd: item.deptcd
+      }
+    })
   }
 
   try {

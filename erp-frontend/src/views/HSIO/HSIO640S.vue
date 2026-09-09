@@ -81,11 +81,14 @@ import DateForm from '@/components/DateForm.vue'
 import { useAlerts } from '@/composables/useAlerts'
 import { api } from '@/utils/axios'
 import { useAuthStore } from '@/stores/authStore'
+import { useTabStore } from '@/stores/tabStore'
+import { addDynamicRoute } from '@/router/dynamicRoute'
 import { useFormReset } from '@/composables/useFormReset'
 import { useCommonHelp } from '@/composables/useCommonHelp'
 import { getDate } from '@/composables/useDate'
 
 const authStore = useAuthStore()
+const tabStore = useTabStore()
 const router = useRouter()
 const { firstDay, today } = getDate()
 const { showAlert, showError, alertMessage, vAlert, vAlertError } = useAlerts()
@@ -172,16 +175,23 @@ async function search() {
 }
 
 const navigateToHistory = (row: any) => {
-    router.push({
-        path: '/HSIO650S',
-        query: {
-            astkind: searchData.astkind,
-            whcd: searchData.whcd,
-            itemcd: row.itemcd,
-            fymd: searchData.fymd,
-            tymd: searchData.tymd
-        }
-    })
+    const pgmId = 'HSIO650S';
+    // 🚀 [개선] 탭 이름을 품목명 포함하여 동적으로 생성 (구분 용이)
+    const pgmNm = `수불현황(${row.itemnm})`;
+    const grpCd = '600';
+
+    const queryStr = `astkind=${searchData.astkind}&whcd=${searchData.whcd}&itemcd=${row.itemcd}&fymd=${searchData.fymd}&tymd=${searchData.tymd}`;
+    const fullPath = `/${pgmId}?${queryStr}`;
+
+    // 1. 라우트 등록 (이미 있으면 통과)
+    addDynamicRoute(pgmId, '창고별 수불현황', grpCd);
+
+    // 2. 탭 추가 및 이동 (path가 유니크 키)
+    tabStore.addTab({
+        pgmId: pgmId,
+        pgmNm: pgmNm,
+        path: fullPath
+    });
 }
 
 function initialize() {

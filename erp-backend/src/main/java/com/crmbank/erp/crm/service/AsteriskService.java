@@ -34,26 +34,75 @@ public class AsteriskService implements ManagerEventListener {
     private final Map<String, String> exten_linked_id = new ConcurrentHashMap<>(); 
     private final Map<String, Set<String>> session_channels = new ConcurrentHashMap<>(); 
     private final Set<String> answering_lock = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<String> registered_extens = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     // 💡 Getter 메서드 표준 카멜케이스 적용
     public Map<String, String> getExtenChannelMap() { return exten_channel_map; }
     public Map<String, String> getExtenLinkedId() { return exten_linked_id; }
     public Map<String, Set<String>> getSessionChannels() { return session_channels; }
+    public List<String> getRegisteredExtens() { return new ArrayList<>(registered_extens); }
 
     @Override
     public void onManagerEvent(ManagerEvent event) {
+        // 💡 모든 중요 이벤트를 실시간으로 INFO 로그에 남겨 추적성을 확보합니다.
+        if (!(event instanceof org.asteriskjava.manager.event.RtcpReceivedEvent)) {
+             log.info("📡 [AMI EVENT] Type: {}", event.getClass().getSimpleName());
+        }
+
         if (event instanceof NewChannelEvent) {
-            String channel = ((NewChannelEvent) event).getChannel();
-            String uniqueId = ((NewChannelEvent) event).getUniqueId();
-            String ext = extractNumberOnly(channel);
-            if (isValidExt(ext)) exten_channel_map.put(ext, channel);
-            session_channels.computeIfAbsent(uniqueId, k -> Collections.synchronizedSet(new HashSet<>())).add(channel);
+            handleNewChannel((NewChannelEvent) event);
         } else if (event instanceof AgentCalledEvent) {
+            // [CASE 1] 대기열 수신 시 팝업 (표준)
             handleAgentCalled((AgentCalledEvent) event);
+        } else if (event instanceof NewStateEvent) {
+            // [CASE 2] 직통 전화 벨울림 시 팝업 (백업)
+            handleNewState((NewStateEvent) event);
         } else if (event instanceof BridgeEnterEvent) {
             handleBridgeEnter((BridgeEnterEvent) event);
         } else if (event instanceof HangupEvent) {
             handleHangup((HangupEvent) event);
+        } else if (event instanceof ContactStatusEvent) {
+            handleContactStatus((ContactStatusEvent) event);
+        }
+    }
+
+    private void handleContactStatus(ContactStatusEvent e) {
+        String exten = e.getEndpointName();
+        if (exten == null) exten = extractNumberOnly(e.getAor());
+
+        if (isValidExt(exten)) {
+            String status = e.getContactStatus();
+            if ("Reachable".equalsIgnoreCase(status) || "Registered".equalsIgnoreCase(status)) {
+                log.info("🟢 [PJSIP ONLINE] 내선번호: {} (Status: {})", exten, status);
+                registered_extens.add(exten);
+            } else if ("Unreachable".equalsIgnoreCase(status) || "Removed".equalsIgnoreCase(status) || "Unknown".equalsIgnoreCase(status)) {
+                log.info("🔴 [PJSIP OFFLINE] 내선번호: {} (Status: {})", exten, status);
+                registered_extens.remove(exten);
+            }
+        }
+    }
+
+    private void handleNewChannel(NewChannelEvent event) {
+        String channel = event.getChannel();
+        String uniqueId = event.getUniqueId();
+        String ext = extractNumberOnly(channel);
+        if (isValidExt(ext)) exten_channel_map.put(ext, channel);
+        session_channels.computeIfAbsent(uniqueId, k -> Collections.synchronizedSet(new HashSet<>())).add(channel);
+    }
+
+    private void handleNewState(NewStateEvent e) {
+        // 💡 [수정] 발신번호 추출 로직 강화 (강제 세팅된 번호 대응)
+        String state = e.getChannelStateDesc();
+        String channel = e.getChannel();
+        String ext = extractNumberOnly(channel);
+        String callerId = e.getCallerIdNum(); // 01032043901 예상
+
+        if ("Ringing".equals(state) && isValidExt(ext)) {
+            // 발신자 본인 제외 필터링
+            if (callerId != null && !channel.contains(callerId)) {
+                log.info("📢 [CTI 팝업] 수신: {}, 발신: {}, 상태: {}", ext, callerId, state);
+                sendInboundPopup(ext, callerId, channel, e.getUniqueId());
+            }
         }
     }
 
@@ -64,9 +113,9 @@ public class AsteriskService implements ManagerEventListener {
             exten_linked_id.put(agentExt, e.getLinkedId());
             if (e.getDestinationChannel() != null) exten_channel_map.put(agentExt, e.getDestinationChannel());
             
-            if (!answering_lock.contains(agentExt)) {
-                sendInboundPopup(agentExt, e.getCallerIdNum(), e.getChannel(), e.getLinkedId());
-            }
+            // 💡 [수정] 벨이 울리는 즉시 팝업 신호(INBOUND_CALL) 발송
+            log.info("📢 [CTI 팝업 신호 전송] 내선: {}, 고객: {}", agentExt, e.getCallerIdNum());
+            sendInboundPopup(agentExt, e.getCallerIdNum(), e.getChannel(), e.getLinkedId());
         }
     }
 
@@ -142,14 +191,29 @@ public class AsteriskService implements ManagerEventListener {
             data.put("callerid", callerId);
             data.put("exten", exten);
             data.put("linkedid", linkedId);
+
+            // 💡 [수정] 하드코딩 제거: WebSocket 세션에서 상담원의 회사코드를 실시간으로 획득
+            String cmpycd = webSocketHandler.getCmpyCd(exten);
+            data.put("cmpycd", cmpycd); 
+            
             Map<String, Object> params = new HashMap<>();
-            params.put("cmpycd", ""); // 💡 [교정] 하드코딩 제거 (향후 DID별 매핑 로직 필요)
+            params.put("cmpycd", cmpycd); // 🚀 획득한 세션 회사코드 주입
             params.put("phone", callerId);
+            
+            // 기존 매퍼를 활용하여 고객 정보 조회
             Map<String, Object> customer = inboundMapper.findCustomerByPhoneMap(params);
-            if (customer != null) customer.forEach((k, v) -> data.put(k.toLowerCase(), v));
-            else data.put("custnm", "미등록 고객");
+            
+            if (customer != null) {
+                log.info("🎯 [CTI] 팝업 전송 (회사: {}, 고객: {})", cmpycd, customer.get("custnm"));
+                customer.forEach((k, v) -> data.put(k.toLowerCase(), v));
+            } else {
+                data.put("custnm", "미등록 고객");
+            }
+
             webSocketHandler.sendMessage(exten, objectMapper.writeValueAsString(data));
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            log.error("❌ [CTI] 팝업 처리 중 오류: {}", e.getMessage());
+        }
     }
 
     private void sendCtiEvent(String exten, String type, String channel, String recFile) {
@@ -169,6 +233,23 @@ public class AsteriskService implements ManagerEventListener {
         return m.find() ? m.group(1) : null;
     }
 
-    @PostConstruct public void init() { new Thread(() -> { try { managerConnection.addEventListener(this); if (!checkAmiConnection()) managerConnection.login(); } catch (Exception e) {} }).start(); }
+    @PostConstruct
+    public void init() {
+        new Thread(() -> {
+            while (true) {
+                try {
+                    if (managerConnection.getState() != org.asteriskjava.manager.ManagerConnectionState.CONNECTED) {
+                        log.info("🔐 [AMI] Asterisk 연결 시도 중...");
+                        managerConnection.addEventListener(this);
+                        managerConnection.login();
+                        log.info("✅ [AMI] Asterisk 연결 및 로그인 성공!");
+                    }
+                } catch (Exception e) {
+                    log.error("❌ [AMI] 연결 실패, 5초 후 재시도: {}", e.getMessage());
+                }
+                try { Thread.sleep(5000); } catch (InterruptedException e) { break; }
+            }
+        }).start();
+    }
     @PreDestroy public void cleanup() { try { if (managerConnection != null) managerConnection.logoff(); } catch (Exception ex) {} }
 }

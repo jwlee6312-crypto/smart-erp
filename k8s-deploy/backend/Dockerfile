@@ -1,24 +1,19 @@
-# 1단계: 빌드 스테이지
-FROM gradle:8.10.2-jdk21 AS build
-WORKDIR /home/gradle/project
-COPY . .
+FROM openjdk:21-jdk-slim
 
-# 안드로이드 앱을 제외하고 백엔드 프로젝트만 빌드하도록 지정
-RUN gradle :erp-backend:assemble -x test --no-daemon
+# 🚀 [정석] 이미지 빌드 시 음원 재생 필수 부품들을 미리 설치합니다.
+# 이렇게 하면 실행 시마다 설치할 필요가 없어 부팅이 쾌속으로 진행됩니다.
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
 
-# 빌드된 결과물을 실행 스테이지로 전달하기 위해 정리
-RUN mkdir -p build/libs && \
-    cp erp-backend/build/libs/*-SNAPSHOT.jar build/libs/app.jar
+# AI 라이브러리도 미리 장착
+RUN pip3 install --break-system-packages google-generativeai
 
-# 2단계: 실행 스테이지
-FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-COPY --from=build /home/gradle/project/build/libs/app.jar app.jar
+COPY erp-backend/build/libs/*.jar app.jar
+COPY scripts/generate_tts.py /app/scripts/generate_tts.py
 
-# 서버 포트 및 시간대 설정
 EXPOSE 8080
-ENV TZ=Asia/Seoul
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-# 💡 자바 실행 옵션 최적화
-ENTRYPOINT ["java", "-Xmx512m", "-Dspring.config.additional-location=file:/app/config/application.properties", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

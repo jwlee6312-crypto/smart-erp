@@ -151,10 +151,14 @@ const initTable = () => {
 
 async function search() {
 	try {
-        const { data } = await api.get('/crm/asterisk/script/search')
-        tableInstance?.setData(data || [])
-        vAlert('조회되었습니다.')
-	} catch (error) { vAlertError('조회 중 오류가 발생했습니다.') }
+        // 💡 [최종 수정] 백엔드 경로(/script/search)와 공백 문제 해결
+		const { data } = await api.get('/crm/asterisk/script/search');
+        tableInstance?.setData(data || []);
+        vAlert('조회되었습니다.');
+	} catch (error) {
+        console.error('ARS 조회 에러:', error);
+        vAlertError('조회 중 오류가 발생했습니다.');
+    }
 }
 
 async function save() {
@@ -171,8 +175,8 @@ async function save() {
 function playCurrentVoice() {
     if (!selectedScript.value || !audioPlayer.value) return
     const filename = `${selectedScript.value.id}.wav`
-    // 💡 캐시 방지를 위해 타임스탬프 추가
-    audioPlayer.value.src = `/crm/inbound/play-recording?file=custom/${filename}&t=${new Date().getTime()}`
+    // 🚀 [최종 해결] 아까 성공했던 Nginx 지름길(/sounds/)을 웹 버튼에도 적용
+    audioPlayer.value.src = `/sounds/${filename}?t=${new Date().getTime()}`
     audioPlayer.value.play().catch(() => vAlertError('음원 파일을 찾을 수 없거나 재생할 수 없습니다.'))
 }
 

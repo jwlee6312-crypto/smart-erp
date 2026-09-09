@@ -6,12 +6,15 @@
         exec hppl_100u_str #{actkind}, #{cmpycd}, #{linecd}, #{progcd}, #{yymmdd}, #{itemcd}, #{itsize}, #{unit}, #{plnqty}, #{updemp}
     </select>
 
+
     <select id="HPPL_150U_STR" resultType="java.util.LinkedHashMap">
         exec hppl_150u_str
             #{actkind}, #{cmpycd}, #{gubun}, #{fromdt}, #{todt}, #{custnm},
             #{reqymd}, #{reqym}, #{reqno}, #{custcd}, #{napgiymd}, #{itemcd}, #{planqty},
             #{bigo}, #{pumymd}, #{pumno}, #{updemp}
     </select>
+
+
 
     <select id="HPPL_110S_STR" resultType="java.util.LinkedHashMap">
         exec hppl_110s_str #{cmpycd}, #{yymmdd}

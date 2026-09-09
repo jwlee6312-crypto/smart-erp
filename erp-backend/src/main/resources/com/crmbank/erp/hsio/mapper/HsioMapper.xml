@@ -135,7 +135,7 @@
     </select>
 
     <select id="HSIO_250U_STR" resultType="java.util.LinkedHashMap">
-        exec hsio_250u_str #{actkind}, #{cmpycd}, #{fromdt}, #{todt}, #{custnm}, #{iogbn}, #{ioym}, #{iono}, #{ioymd}, #{iotype}, #{custcd}, #{deptcd}, #{whcd}, #{addres}, #{remark}, #{cfmyn}, #{gubun}, #{totsum}, #{updemp}
+        exec hsio_250u_str #{actkind}, #{cmpycd}, #{fromdt}, #{todt}, #{custnm}, #{iogbn}, #{ioym}, #{iono}, #{ioymd}, #{iotype}, #{custcd}, #{deptcd}, #{whcd}, #{address}, #{remark}, #{cfmyn}, #{gubun}, #{totsum}, #{updemp}
     </select>
 
     <select id="HSIO_251U_STR" resultType="java.util.LinkedHashMap">
@@ -219,7 +219,7 @@
     <select id="HSIO_550U_STR" resultType="java.util.LinkedHashMap">
         exec hsio_550u_str #{actkind}, #{cmpycd}, #{iogbn}, #{fromdt}, #{todt}, #{custcd},
         #{deptcd}, #{ioym}, #{iono}, #{ioymd}, #{iotype}, #{whcd}, #{area}, #{userid},
-        #{trnemp}, #{trancd}, #{addres}, #{d_address}, #{remark}, #{cfmyn}, #{totsum}, #{updemp}
+        #{trnemp}, #{trancd}, #{address}, #{d_address}, #{remark}, #{cfmyn}, #{totsum}, #{updemp}
     </select>
 
     <select id="HSIO_551U_STR" resultType="java.util.LinkedHashMap">

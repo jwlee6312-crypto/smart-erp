@@ -238,7 +238,7 @@ async function save() {
         actkind: 'U0', cmpycd: authStore.cmpycd, iogbn: '200',
         fromdt: searchData.fromdt.replace(/-/g, ''), todt: searchData.todt.replace(/-/g, ''),
         deptcd: item.deptcd, custcd: item.custcd,
-        salsemp: searchData.salsemp === '000' ? '' : searchData.salsemp,
+        saleuserid: searchData.salsemp === '000' ? '' : searchData.salsemp,
         taxunit: registerData.taxunit, vattype: registerData.vattype,
         jsanymd: pubymd,
         jsanamt: String(item.ioamt || 0), jsanvat: String(item.iovat || 0),
@@ -265,19 +265,28 @@ onMounted(async () => {
   api.get('/hp00/HP00_000S_STR', { params: { gubun: 'cl', cmpycd: authStore.cmpycd } }).then(r => {
     if (r.data?.length) {
       const d = r.data[0]
-      registerData.clsymd = String(d.clsymd || d.CLSYMD || Object.values(d)[0]).trim()
-      registerData.sclsym = String(d.sclsym || d.SCLSYM || Object.values(d)[1]).trim()
+      registerData.clsymd = String(d.clsymd || '').trim()
+      registerData.sclsym = String(d.sclsym || '').trim()
     }
   })
-  api.get('/ha00/HA00_00P_STR', { params: { gubun: 'SD', cmpycd: authStore.cmpycd } }).then(r => {
-    if (r.data) empOptions.value = r.data.map((i: any) => ({ codecd: i.userid, codenm: i.usernm }))
+  api.post('/ha00/HA00_00P_STR', { gubun: 'SD', cmpycd: authStore.cmpycd }).then(r => {
+    if (r.data) empOptions.value = r.data.map((i: any) => ({
+      codecd: String(i.userid || i.code || '').trim(),
+      codenm: String(i.usernm || i.cdnm || '').trim()
+    }))
   })
   api.post('/ha00/HA00_00P_STR', { gubun: 'SA', cmpycd: authStore.cmpycd }).then(r => {
-    taxUnitOptions.value = (r.data || []).map((i:any)=>({codecd:String(i.taxunit||Object.values(i)[0]).trim(), codenm:String(i.unitnm||Object.values(i)[1]).trim()}))
-    if(taxUnitOptions.value.length) registerData.taxunit = taxUnitOptions.value[0].codecd
+    taxUnitOptions.value = (r.data || []).map((i: any) => ({
+      codecd: String(i.taxunit || i.code || '').trim(),
+      codenm: String(i.unitnm || i.cdnm || '').trim()
+    }))
+    if (taxUnitOptions.value.length) registerData.taxunit = taxUnitOptions.value[0].codecd
   })
   api.post('/ha00/HA00_00P_STR', { gubun: 'E0', gbncd: '130', cmpycd: authStore.cmpycd }).then(r => {
-    vatTypeOptions.value = (r.data || []).map((i:any)=>({codecd:String(i.codecd||Object.values(i)[0]).trim(), codenm:String(i.codenm||Object.values(i)[1]).trim()}))
+    vatTypeOptions.value = (r.data || []).map((i: any) => ({
+      codecd: String(i.codecd || i.code || '').trim(),
+      codenm: String(i.codenm || i.cdnm || '').trim()
+    }))
   })
 
   nextTick(() => initGrid())

@@ -18,7 +18,7 @@ public class AsteriskConfig {
     @Value("${asterisk.username:admin}")
     private String username;
 
-    @Value("${asterisk.password:gkdldhs12#$}")
+    @Value("${asterisk.password:Crmbank123!}")
     private String password;
 
     @Bean

@@ -57,6 +57,9 @@ public class EmailService {
     private final String FIXED_FROM_EMAIL = "jwlee6312@gmail.com";
     private final String BRAND_NAME = "SmartCore";
 
+    @Value("${frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     /**
      * 💡 실시간 상담실 초대 메일 발송
      */
@@ -68,9 +71,9 @@ public class EmailService {
             // 💡 [중요] URL 파라미터 인코딩 (한글 이름 및 특수문자 깨짐 방지)
             String encodedEmail = URLEncoder.encode(toEmail, StandardCharsets.UTF_8);
             String encodedName = URLEncoder.encode(custNm, StandardCharsets.UTF_8);
-            inviteUrl = String.format("http://localhost:5173/HGOA/HGOA100C?email=%s&name=%s", encodedEmail, encodedName);
+            inviteUrl = String.format("%s/HGOA/HGOA100C?email=%s&name=%s", frontendUrl, encodedEmail, encodedName);
         } catch (Exception e) {
-            inviteUrl = String.format("http://localhost:5173/HGOA/HGOA100C?email=%s&name=%s", toEmail, custNm);
+            inviteUrl = String.format("%s/HGOA/HGOA100C?email=%s&name=%s", frontendUrl, toEmail, custNm);
         }
 
         String subject = String.format("[%s] 실시간 고객 상담실 초대장입니다.", BRAND_NAME);

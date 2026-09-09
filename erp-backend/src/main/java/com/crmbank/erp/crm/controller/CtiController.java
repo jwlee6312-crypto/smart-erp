@@ -87,6 +87,11 @@ public class CtiController {
         return result;
     }
 
+    @GetMapping("/active-agents")
+    public java.util.List<String> getActiveAgents() {
+        return asteriskService.getRegisteredExtens();
+    }
+
     /**
      * 💡 실제 아웃바운드 발신 실행
      */

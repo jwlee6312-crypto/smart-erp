@@ -4,9 +4,8 @@
 .idea/
 .vscode/
 
-# [중요] 백엔드 관련 제외
-erp-backend/build/
-erp-backend/bin/
+# [중요] 백엔드 빌드 결과물은 포함해야 함 (최적화 배포용)
+# erp-backend/build/  <-- 이 부분을 주석 처리하거나 삭제합니다.
 **/.gradle/
 
 # [💡 핵심] 프론트엔드 빌드 결과물(dist)은 절대로 제외하면 안 됨

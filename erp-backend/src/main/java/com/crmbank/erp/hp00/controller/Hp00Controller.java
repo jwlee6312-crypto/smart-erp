@@ -8,10 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Slf4j
 @RestController
@@ -20,21 +17,6 @@ import java.util.stream.Collectors;
 public class Hp00Controller {
 
     private final Hp00Mapper hp00Mapper;
-
-    private void injectSession(Map<String, Object> params, HttpSession session) {
-        UserSession user = (UserSession) session.getAttribute("user_session");
-        if (user != null) {
-            params.putIfAbsent("cmpycd", user.getCmpycd());
-            params.putIfAbsent("userid", user.getUserid());
-        }
-        // 💡 HP00_000S_STR 명세 보장 (6개 변수)
-        params.putIfAbsent("gubun", "");
-        params.putIfAbsent("cmpycd", "");
-        params.putIfAbsent("gbncd", "");
-        params.putIfAbsent("code", "");
-        params.putIfAbsent("codenm", "");
-        params.putIfAbsent("etcval", "");
-    }
 
     @GetMapping("/{procedure}")
     public ResponseEntity<List<Map<String, Object>>> executeGet(
@@ -50,30 +32,44 @@ public class Hp00Controller {
 
     private ResponseEntity<List<Map<String, Object>>> execute(String procedure, Map<String, Object> params, HttpSession session) {
         injectSession(params, session);
-        log.info("📋 [HP00] SSMS 실행용: {}", buildSsmsLog(procedure, params));
-        
         try {
             List<Map<String, Object>> result;
             if ("HP00_000S_STR".equalsIgnoreCase(procedure)) {
+                params.putIfAbsent("gubun", "");
+                params.putIfAbsent("gbncd", "");
+                params.putIfAbsent("code", "");
+                params.putIfAbsent("codenm", "");
+                params.putIfAbsent("etcval", "");
                 result = hp00Mapper.HP00_000S_STR(params);
             } else {
                 return ResponseEntity.notFound().build();
             }
-            return ResponseEntity.ok(result);
+            return ResponseEntity.ok(convertToLowerCaseKeys(result));
         } catch (Exception e) {
             log.error("❌ [HP00] 에러: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    private String buildSsmsLog(String procedure, Map<String, Object> params) {
-        String[] keys = {"gubun", "cmpycd", "gbncd", "code", "codenm", "etcval"};
-        String values = java.util.Arrays.stream(keys)
-                .map(key -> {
-                    Object val = params.get(key);
-                    return val == null ? "''" : "'" + val.toString().trim() + "'";
-                })
-                .collect(Collectors.joining(", "));
-        return String.format("EXEC %s %s", procedure.toUpperCase(), values);
+    private List<Map<String, Object>> convertToLowerCaseKeys(List<Map<String, Object>> list) {
+        List<Map<String, Object>> newList = new ArrayList<>();
+        if (list != null) {
+            for (Map<String, Object> map : list) {
+                Map<String, Object> newMap = new LinkedHashMap<>();
+                for (Map.Entry<String, Object> entry : map.entrySet()) {
+                    newMap.put(entry.getKey().toLowerCase(), entry.getValue());
+                }
+                newList.add(newMap);
+            }
+        }
+        return newList;
+    }
+
+    private void injectSession(Map<String, Object> params, HttpSession session) {
+        UserSession user = (UserSession) session.getAttribute("user_session");
+        if (user != null) {
+            params.putIfAbsent("cmpycd", user.getCmpycd());
+            params.putIfAbsent("userid", user.getUserid());
+        }
     }
 }

@@ -88,7 +88,7 @@
                       </div>
                     </td>
                     <th class="bg-light text-center">입고번호</th>
-                    <td><input v-model="formData.iono" class="form-control bg-light text-primary fw-bold text-center" readonly placeholder="자동생성" /></td>
+                    <td><input :value="formData.ioym && formData.iono ? `${formData.ioym}-${formData.iono}` : formData.iono" class="form-control bg-light text-primary fw-bold text-center" readonly placeholder="자동생성" /></td>
                     <th class="required bg-light text-center">입고일자</th>
                     <td><input v-model="formData.ioymd" type="date" class="form-control" :readonly="isClosed" /></td>
                     <th class="required bg-light text-center">입고창고</th>
@@ -173,7 +173,8 @@ const searchForm = reactive({ fromdt: firstDay, todt: today, schcustnm: '' })
 const formData = reactive<any>({
   actkind: 'S0', cmpycd: authStore.cmpycd, ioym: today.substring(0, 7).replace('-', ''), iono: '',
   ioymd: today, deptcd: authStore.deptcd, deptnm: authStore.deptnm,
-  custcd: '', custnm: '', whcd: '100', remark: '', userid: authStore.userid, usernm: authStore.usernm, pkunityn: 'N', astkind: '2'
+  custcd: '', custnm: '', whcd: '100', remark: '', userid: authStore.userid, usernm: authStore.usernm, pkunityn: 'N', astkind: '2',
+  gubun: '1' // 🚀 [필수] 입출 구분자 초기화
 })
 
 const closingInfo = reactive({ sclsym: '' })
@@ -204,7 +205,13 @@ const initGrids = () => {
           return v && v.length === 8 ? `${v.substring(0,4)}-${v.substring(4,6)}-${v.substring(6,8)}` : v;
         }
       },
-      { title: "입고번호", field: "iono", hozAlign: "center", width: 110, cssClass: "fw-bold text-primary", headerSort: false }
+      { title: "입고번호", field: "iono", hozAlign: "center", width: 110, cssClass: "fw-bold text-primary", headerSort: false,
+        formatter: (cell) => {
+          const d = cell.getRow().getData();
+          // 🚀 [보정] 입고년월-입고번호 형식으로 표시
+          return d.ioym && d.iono ? `${d.ioym}-${d.iono}` : d.iono;
+        }
+      }
     ],
   });
   grid1.on("rowClick", (e, row) => fetchDetail(row.getData()));
@@ -232,9 +239,9 @@ const initGrids = () => {
       },
       { title: "규격", field: "itsize", width: 120 },
       { title: "단위", field: "unit", width: 60, hozAlign: "center" },
-      { title: "수량", field: "ioqty", width: 90, hozAlign: "right", editor: "number", cellEdited: (cell) => calcRow(cell.getRow(), 'ioqty') },
-      { title: "단가", field: "price", width: 100, hozAlign: "right", editor: "number", cellEdited: (cell) => calcRow(cell.getRow(), 'price') },
-      { title: "금액", field: "ioamt", width: 110, hozAlign: "right", editor: "number", cellEdited: (cell) => calcRow(cell.getRow(), 'ioamt'), formatter: "money", formatterParams: { precision: 0 }, bottomCalc: "sum" },
+      { title: "수량", field: "ioqty", width: 90, hozAlign: "right", editor: "number", formatter: "money", formatterParams: { precision: 0 }, cellEdited: (cell) => calcRow(cell.getRow()) },
+      { title: "단가", field: "price", width: 100, hozAlign: "right", editor: "number", formatter: "money", formatterParams: { precision: 0 }, cellEdited: (cell) => calcRow(cell.getRow()) },
+      { title: "금액", field: "ioamt", width: 110, hozAlign: "right", editor: "number", formatter: "money", formatterParams: { precision: 0 }, bottomCalc: "sum", cellEdited: (cell) => calcRowAmt(cell.getRow()) },
       { title: "포장용기", field: "pkunitnm", width: 100, visible: formData.pkunityn === 'Y' },
       { title: "삭제", width: 40, hozAlign: "center",
         formatter: (cell) => cell.getData()._STATE === 'EMPTY' ? "" : "<i class='bi bi-trash text-danger cursor-pointer'></i>",
@@ -246,21 +253,22 @@ const initGrids = () => {
 }
 
 // [3] 로직 처리
-const calcRow = (row: any, field: string) => {
-  const data = row.getData();
-  if (data._STATE === 'EMPTY') return;
+const calcRow = (row: any) => {
+  const d = row.getData();
+  if (d._STATE === 'EMPTY') return;
+  const qty = Number(d.ioqty || 0);
+  const price = Number(d.price || 0);
+  const amt = Math.round(qty * price);
+  row.update({ ioamt: amt, upkind: d.iorowno ? 'U' : 'A' });
+}
 
-  let qty = Number(data.ioqty || 0);
-  let price = Number(data.price || 0);
-  let amt = Number(data.ioamt || 0);
-
-  if (field === 'ioqty' || field === 'price') {
-    amt = Math.floor(qty * price);
-  } else if (field === 'ioamt') {
-    price = qty !== 0 ? Math.floor(amt / qty) : 0;
-  }
-
-  row.update({ ioamt: amt, price: price, upkind: data.iorowno ? 'U' : 'A' });
+const calcRowAmt = (row: any) => {
+  const d = row.getData();
+  if (d._STATE === 'EMPTY') return;
+  const qty = Number(d.ioqty || 0);
+  const amt = Number(d.ioamt || 0);
+  const price = qty > 0 ? Math.round(amt / qty) : Number(d.price || 0);
+  row.update({ price: price, upkind: d.iorowno ? 'U' : 'A' });
 }
 
 const handleOpenHelp = (type: string, target?: any) => {
@@ -324,7 +332,14 @@ const handleRowAction = (row: any) => {
 
 async function search() {
   try {
-    const params = { actkind: 'S0', cmpycd: authStore.cmpycd, fromdt: searchForm.fromdt.replace(/-/g, ''), todt: searchForm.todt.replace(/-/g, ''), custnm: searchForm.schcustnm };
+    const params = {
+        actkind: 'L',
+        cmpycd: authStore.cmpycd,
+        iogbn: '100',
+        fromdt: searchForm.fromdt.replace(/-/g, ''),
+        todt: searchForm.todt.replace(/-/g, ''),
+        custnm: searchForm.schcustnm
+    };
     const res = await api.post('/hsio/HSIO_250U_STR', params);
     grid1?.setData(res.data || res.data);
     vAlert('조회되었습니다.');
@@ -332,9 +347,17 @@ async function search() {
 }
 
 async function fetchDetail(row: any) {
-  Object.assign(formData, row);
+  const fYmd = (d: string) => d && d.length === 8 ? `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)}` : today;
+  Object.assign(formData, { ...row, ioymd: fYmd(row.ioymd) });
   try {
-    const res = await api.post('/hsio/HSIO_251U_STR', { ...formData, actkind: 'S0' });
+    const res = await api.post('/hsio/HSIO_251U_STR', {
+        ...formData,
+        actkind: 'S',
+        iogbn: '100',
+        ioqty: 0,
+        ioamt: 0,
+        iovat: 0
+    });
     grid2?.setData((res.data || []).map((i: any) => {
       const ioqty = Number(i.ioqty || 0);
       const ioamt = Number(i.ioamt || 0);
@@ -347,17 +370,57 @@ async function fetchDetail(row: any) {
 
 async function save() {
   const details = grid2?.getData().filter(r => r._STATE !== 'EMPTY' && r.upkind) || [];
-  if (!details.length && !formData.iono) return vAlertError('입고 품목을 추가하세요.');
+  if (!details.length && (!formData.iono || formData.iono === '0000')) return vAlertError('입고 품목을 추가하세요.');
+
+  if (!confirm('덤입고 작업을 진행하시겠습니까?')) return;
+
+  const ioymd = formData.ioymd.replace(/-/g, '');
+  const ioym = ioymd.substring(0, 6);
 
   try {
     const payload = {
-    ...formData,
-    actkind: formData.iono ? 'U0' : 'A0',
-    cfmyn: 'Y',
-    items: details };
-    await api.post('/hsio/HSIO_250U_STR', payload);
-    vAlert('저장되었습니다.'); search();
-  } catch (e) { vAlertError('저장 실패'); }
+        mst: {
+            ...formData,
+            actkind: (!formData.iono || formData.iono === '0000') ? 'A0' : 'U0',
+            cmpycd: authStore.cmpycd,
+            ioym: ioym,
+            ioymd: ioymd,
+            iogbn: '100',
+            iotype: '120',
+            address: formData.address || '',
+            cfmyn: 'N',
+            gubun: '1',
+            totsum: Number(formData.totsum || 0), // 🚀 [보정] 숫자형 보장
+            updemp: authStore.userid
+        },
+        dtl: details.map(d => ({
+            ...d,
+            actkind: d.upkind === 'A' ? 'A0' : (d.upkind === 'D' ? 'D0' : 'U0'),
+            cmpycd: authStore.cmpycd,
+            ioym: ioym,
+            iono: formData.iono || '',
+            ioymd: ioymd,
+            iogbn: '100',
+            iotype: '120',
+            whcd: formData.whcd,
+            deptcd: formData.deptcd,
+            custcd: formData.custcd,
+            iorowno: d.iorowno || '',
+            ioqty: Number(d.ioqty || 0),
+            ioamt: Number(d.ioamt || 0),
+            iovat: Number(d.iovat || 0), // 🚀 [보정] null 방지
+            cfmyn: 'N',
+            updemp: authStore.userid
+        }))
+    };
+
+    // 🚀 [표준 준수] 통합 저장 API 호출 (백엔드 서비스 단에서 무결성 보장)
+    await api.post('/hsio/HSIO_250U_SAVE', payload);
+    vAlert('저장되었습니다.');
+    search();
+  } catch (e: any) {
+    vAlertError(e.response?.data?.message || '저장 중 오류 발생');
+  }
 }
 
 function addRow() {
@@ -373,7 +436,20 @@ function deleteSelectedRows() {
 
 function initialize() {
   resetForm(formData);
-  formData.ioym = today.substring(0, 7).replace('-', ''); formData.ioymd = today; formData.whcd = '100';
+  Object.assign(formData, {
+    cmpycd: authStore.cmpycd,
+    deptcd: authStore.deptcd,
+    deptnm: authStore.deptnm,
+    userid: authStore.userid,
+    usernm: authStore.usernm,
+    ioymd: today,
+    ioym: today.substring(0, 7).replace('-', ''),
+    whcd: '100',
+    gubun: '1',
+    astkind: '2',
+    iono: '',
+    pkunityn: 'N'
+  });
   grid1?.clearData(); grid2?.setData([]);
 }
 

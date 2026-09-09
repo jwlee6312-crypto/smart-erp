@@ -153,7 +153,7 @@ import { reactive, ref, onMounted, computed, nextTick } from 'vue'
 import { TabulatorFull as Tabulator } from 'tabulator-tables'
 import 'tabulator-tables/dist/css/tabulator_bootstrap5.min.css'
 import { useAlerts } from '@/composables/useAlerts'
-import { fetchLineData, type SelectPdLineData } from '@/composables/useFetchSelectData'
+// import { fetchLineData, type SelectPdLineData } from '@/composables/useFetchSelectData'
 import { api } from '@/utils/axios'
 import { useAuthStore } from '@/stores/authStore'
 import { useFormReset } from '@/composables/useFormReset'
@@ -168,7 +168,7 @@ const { resetForm } = useFormReset()
 // 1. 상태 관리
 const viewDate = ref(new Date())
 const searchForm = reactive({ linecd: '' })
-const lineData = ref<SelectPdLineData[]>([])
+const lineData = ref<any[]>([])
 const summaryData = ref<any[]>([])
 const selectedDate = ref('')
 const gridElement = ref<HTMLElement | null>(null)
@@ -180,6 +180,28 @@ const selectedDaySummary = computed(() => summaryData.value.find(d => d.yymmdd =
 // 2. 초기화 및 조회
 const initialize = () => { viewDate.value = new Date(); searchForm.linecd = ''; fetchData(); }
 const changeMonth = (val: number) => { viewDate.value = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() + val, 1); fetchData(); }
+
+/**
+ * 🚀 라인정보 직접 조회 (공통함수 의존성 제거 및 대소문자 대응)
+ */
+const fetchLineList = async () => {
+  try {
+    const res = await api.get('/hp00/HP00_000S_STR', {
+      params: {
+        gubun: 'L0',
+        cmpycd: authStore.cmpycd,
+        gbncd: 'Y'
+      }
+    })
+    const data = res.data || []
+    lineData.value = data.map((item: any) => ({
+      linecd: item.LINECD || item.linecd || '',
+      linenm: item.LINENM || item.linenm || ''
+    }))
+  } catch (e) {
+    console.error('라인정보 조회 실패:', e)
+  }
+}
 
 const fetchData = async () => {
   try {
@@ -321,7 +343,11 @@ const isHoliday = (v: string) => {
     return d.getDay() === 0 || d.getDay() === 6
 }
 
-onMounted(async () => { lineData.value = await fetchLineData(); nextTick(initGrid); fetchData() })
+onMounted(async () => {
+  await fetchLineList()
+  nextTick(initGrid)
+  fetchData()
+})
 </script>
 
 <style scoped>

@@ -22,5 +22,7 @@ public class Hsio581u {
     private String        itemcd;
     private String        unit;
     private BigDecimal    ioqty;
+    private String        ordym;   // 🚀 누락 필드 추가
+    private String        ordno;   // 🚀 누락 필드 추가
     private String        updemp;
 }

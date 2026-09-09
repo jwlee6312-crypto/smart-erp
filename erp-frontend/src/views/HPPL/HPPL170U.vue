@@ -105,12 +105,14 @@ import 'tabulator-tables/dist/css/tabulator_bootstrap5.min.css'
 import { useAlerts } from '@/composables/useAlerts'
 import { useSearch } from '@/composables/useSearch'
 import { useSave } from '@/composables/useSave'
-import { fetchLineData, type SelectPdLineData } from '@/composables/useFetchSelectData'
+// import { fetchLineData, type SelectPdLineData } from '@/composables/useFetchSelectData'
 import { api } from '@/utils/axios'
+import { useAuthStore } from '@/stores/authStore'
 import AppAlert from '@/components/AppAlert.vue'
 import Modal from '@/components/Modal.vue'
 import type { ModalProps } from '@/types/modal'
 
+const authStore = useAuthStore()
 const { showAlert, showError, alertMessage, vAlert, vAlertError } = useAlerts()
 const { searchStart } = useSearch()
 const { saveBody } = useSave()
@@ -121,7 +123,19 @@ const searchForm = reactive({
     gubun: '100'
 })
 const applyLineCd = ref('')
-const lineData = ref<SelectPdLineData[]>([])
+const lineData = ref<any[]>([])
+
+/**
+ * 🚀 생산라인 콤보 데이터 조회
+ */
+const fetchLineDirect = async () => {
+	try {
+		const res = await api.post('/hp00/HP00_000S_STR', { gubun: 'L0' })
+		lineData.value = res.data || []
+	} catch (e) {
+		console.error('Line Data Load Error:', e)
+	}
+}
 
 const mainGridRef = ref<HTMLElement | null>(null)
 const subGridRef = ref<HTMLElement | null>(null)
@@ -259,7 +273,7 @@ const initGrid = () => {
 }
 
 onMounted(async () => {
-	lineData.value = await fetchLineData()
+	await fetchLineDirect()
 	nextTick(() => {
 		initGrid()
 		search()

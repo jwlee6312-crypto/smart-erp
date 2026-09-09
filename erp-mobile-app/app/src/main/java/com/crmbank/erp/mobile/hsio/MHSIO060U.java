@@ -212,17 +212,54 @@ public class MHSIO060U extends BaseActivity {
 
         Map<String, Object> mst = new HashMap<>();
         mst.put("cmpycd", cmpycd);
+        mst.put("iogbn", "100");
         mst.put("custcd", getStringVal(masterData, "custcd"));
         mst.put("whcd", getSelectedWhcd());
         mst.put("ioymd", tvInboundDate.getText().toString().replace("-", ""));
+        mst.put("ioym", tvInboundDate.getText().toString().replace("-", "").substring(0, 6));
+        mst.put("iotype", "100");
         mst.put("remark", etRemarks.getText().toString());
         mst.put("userid", userid);
 
         List<Map<String, Object>> items = new ArrayList<>();
         for (Map<String, Object> item : detailList) {
+            double janQty = getDoubleVal(item, "janqty");
+            double ioQty = getDoubleVal(item, "ioqty");
+
+            if (ioQty <= 0) continue; // 입고수량이 0 이하인 경우 제외
+            if (ioQty > janQty) {
+                Toast.makeText(this, "[" + getStringVal(item, "itemnm") + "] 입고수량이 미입고수량보다 큽니다.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             Map<String, Object> d = new HashMap<>(item);
-            d.put("ioqty", getStringVal(item, "ioqty"));
+            
+            // 🚀 [로직 동기화] 발주금액/수량 비례 입고금액/부가세 계산 (HSIO060U.vue 이식)
+            double bQty = getDoubleVal(item, "balqty");
+            double bAmt = getDoubleVal(item, "balamt");
+            double bVat = getDoubleVal(item, "balvat");
+            
+            long ioamt = 0, iovat = 0;
+            if (bQty > 0) {
+                ioamt = Math.round((bAmt / bQty) * ioQty);
+                iovat = Math.round((bVat / bQty) * ioQty);
+            }
+
+            d.put("ioqty", ioQty);
+            d.put("ioamt", ioamt);
+            d.put("iovat", iovat);
+            d.put("iogbn", "100");
+            d.put("custcd", mst.get("custcd"));
+            d.put("whcd", mst.get("whcd"));
+            d.put("ioymd", mst.get("ioymd"));
+            d.put("iotype", "100");
+            
             items.add(d);
+        }
+
+        if (items.isEmpty()) {
+            Toast.makeText(this, "입고 처리할 항목이 없습니다.", Toast.LENGTH_SHORT).show();
+            return;
         }
 
         Map<String, Object> payload = new HashMap<>();
@@ -231,13 +268,22 @@ public class MHSIO060U extends BaseActivity {
 
         apiService.saveHsio060U(payload).enqueue(new Callback<ApiResponse<Map<String, Object>>>() {
             @Override public void onResponse(@NonNull Call<ApiResponse<Map<String, Object>>> call, @NonNull Response<ApiResponse<Map<String, Object>>> response) {
-                if (response.isSuccessful()) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
                     Toast.makeText(MHSIO060U.this, "입고 처리가 완료되었습니다.", Toast.LENGTH_SHORT).show();
                     initialize();
+                } else {
+                    String msg = response.body() != null ? response.body().getMessage() : "저장 실패";
+                    Toast.makeText(MHSIO060U.this, msg, Toast.LENGTH_SHORT).show();
                 }
             }
-            @Override public void onFailure(@NonNull Call<ApiResponse<Map<String, Object>>> call, @NonNull Throwable t) {}
+            @Override public void onFailure(@NonNull Call<ApiResponse<Map<String, Object>>> call, @NonNull Throwable t) {
+                Toast.makeText(MHSIO060U.this, "네트워크 오류: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         });
+    }
+
+    private double getDoubleVal(Map<String, Object> map, String key) {
+        try { return Double.parseDouble(getStringVal(map, key).replace(",", "")); } catch (Exception e) { return 0; }
     }
 
     private String getSelectedWhcd() {

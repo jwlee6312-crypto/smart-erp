@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted, computed, nextTick } from 'vue'
+import { reactive, ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { TabulatorFull as Tabulator } from 'tabulator-tables'
 import 'tabulator-tables/dist/css/tabulator_bootstrap5.min.css'
@@ -82,11 +82,14 @@ import DateForm from '@/components/DateForm.vue'
 import { useAlerts } from '@/composables/useAlerts'
 import { api } from '@/utils/axios'
 import { useAuthStore } from '@/stores/authStore'
+import { useTabStore } from '@/stores/tabStore'
+import { addDynamicRoute } from '@/router/dynamicRoute'
 import { useFormReset } from '@/composables/useFormReset'
 import { useCommonHelp } from '@/composables/useCommonHelp'
 import { getDate } from '@/composables/useDate'
 
 const authStore = useAuthStore()
+const tabStore = useTabStore()
 const router = useRouter()
 const route = useRoute()
 const { firstDay, today } = getDate()
@@ -125,14 +128,12 @@ const initGrid = () => {
         title: "출고번호", field: "io_full", width: 150, hozAlign: "center",
         formatter: (cell) => {
             const val = cell.getValue();
-            return val ? `<span class="text-primary text-decoration-underline cursor-pointer fw-bold">${val}</span>` : '';
-        },
-        cellClick: (e, cell) => navigateToOrigin(cell.getData())
+            return val ? `<span class="fw-bold">${val}</span>` : '';
+        }
       },
       {
         title: "적요 (거래처/유형)", field: "remark", minWidth: 250,
-        formatter: (cell) => `<span class="text-primary cursor-pointer">${cell.getValue()}</span>`,
-        cellClick: (e, cell) => navigateToOrigin(cell.getData())
+        formatter: (cell) => `<span>${cell.getValue()}</span>`
       },
       { title: "입출구분", field: "iotypenm", width: 100, hozAlign: "center" },
       { title: "입고", field: "inqty", width: 150, hozAlign: "right", formatter: "money", formatterParams: { precision: 0 } },
@@ -193,25 +194,37 @@ async function search() {
 }
 
 const navigateToOrigin = (row: any) => {
-    const { iogbn, gubun, iotype, ioym, iono, deptcd, outqty } = row;
-    if (!ioym || !iono || iono === '000000') return;
-
-    let routeName = '';
-    if (iogbn === "200" && gubun === "1" && iotype === "100" && Number(outqty) > 0) routeName = 'HSIO500U';
-    else if (iogbn === "200" && gubun === "2" && iotype === "100" && Number(outqty) > 0) routeName = 'HSOD200S';
-    else if (iogbn === "200" && gubun === "1" && iotype === "100" && Number(outqty) < 0) routeName = 'HSIO490U';
-    else if (iogbn === "200" && Number(iotype) >= 300 && Number(iotype) < 390) routeName = 'HSIO570U';
-    else if (iogbn === "200" && iotype === "390") routeName = 'HSIO730U';
-    else if (iotype === "390") routeName = 'HSIO720U';
-    else if (iogbn === "200" && iotype === "200") routeName = 'HSIO580U';
-    else if (iogbn === "100" && gubun === "1" && iotype === "100") routeName = 'HSIO100U';
-    else if (iogbn === "100" && gubun === "2" && iotype === "100") routeName = 'HSOD300S';
-    else if (iogbn === "100" && gubun === "1" && iotype === "120") routeName = 'HSIO250U';
-
-    if (routeName) {
-        router.push({ path: `/${routeName}`, query: { ioym, iono, deptcd, actkind: 'S' } });
-    }
+    // 🚀 [지시사항 반영] 프로그램 단위 Link 처리 제거 (조회 전용 유지)
+    console.log('상세 데이터:', row);
 }
+
+const loadItemInfoAndSearch = async () => {
+    if (!searchData.itemcd) return;
+    try {
+        const r = await api.post('/hs00/HS00_000S_STR', { gubun: 'I1', cmpycd: authStore.cmpycd, gbncd: '2', code: searchData.itemcd });
+        if (r.data?.length) {
+            const d = r.data[0];
+            searchData.itemnm = d.itemnm;
+            searchData.itsize = d.itsize;
+            searchData.unit = d.unitnm;
+            search();
+        }
+    } catch (e) { console.error('품목 정보 로드 실패'); }
+}
+
+watch(() => route.query.itemcd, (newVal) => {
+    if (newVal && route.path.includes('/HSIO650S')) {
+        // 🚀 URL 쿼리 파라미터가 변경되면 검색 조건 동기화 및 즉시 재조회
+        Object.assign(searchData, {
+            fymd: (route.query.fymd as string) || searchData.fymd,
+            tymd: (route.query.tymd as string) || searchData.tymd,
+            whcd: (route.query.whcd as string) || searchData.whcd,
+            astkind: (route.query.astkind as string) || searchData.astkind,
+            itemcd: newVal as string
+        });
+        loadItemInfoAndSearch();
+    }
+}, { immediate: false })
 
 function initialize() {
   resetForm(searchData)
@@ -252,17 +265,7 @@ onMounted(async () => {
   await fetchWhOptions()
   nextTick(() => {
       initGrid()
-      if (searchData.itemcd) {
-          api.post('/hs00/HS00_000S_STR', { gubun: 'I1', cmpycd: authStore.cmpycd, gbncd: '2', code: searchData.itemcd }).then(r => {
-              if (r.data?.length) {
-                  const d = r.data[0];
-                  searchData.itemnm = d.itemnm;
-                  searchData.itsize = d.itsize;
-                  searchData.unit = d.unitnm;
-                  search();
-              }
-          })
-      }
+      loadItemInfoAndSearch()
   })
 })
 </script>

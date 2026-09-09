@@ -23,11 +23,18 @@ public class CtiWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        String exten = getExtension(session);
+        try {
+            String exten = getExtension(session);
 
-        if (exten != null && !exten.isEmpty()) {
-            SESSIONS.computeIfAbsent(exten, k -> new CopyOnWriteArrayList<>()).add(session);
-            log.info("🎯 [CTI WS] 상담원 연결 완료: 내선번호 [{}], 총 세션 수: {}", exten, SESSIONS.get(exten).size());
+            if (exten != null && !exten.trim().isEmpty()) {
+                SESSIONS.computeIfAbsent(exten, k -> new CopyOnWriteArrayList<>()).add(session);
+                log.info("🎯 [CTI WS] 상담원 연결 완료: 내선번호 [{}], ID: [{}], 총 세션: {}", 
+                         exten, session.getId(), SESSIONS.get(exten).size());
+            } else {
+                log.warn("⚠️ [CTI WS] 내선번호 없이 연결됨: ID: [{}]. 팝업 수신이 불가능합니다.", session.getId());
+            }
+        } catch (Exception e) {
+            log.error("❌ [CTI WS] 연결 처리 중 오류 발생: {}", e.getMessage());
         }
     }
 
@@ -67,19 +74,42 @@ public class CtiWebSocketHandler extends TextWebSocketHandler {
         return new ArrayList<>(SESSIONS.keySet());
     }
 
-    public void sendMessage(String exten, String message) {
+    // 💡 [추가] 특정 내선의 세션에서 회사코드 추출
+    public String getCmpyCd(String exten) {
         List<WebSocketSession> sessions = SESSIONS.get(exten);
-        if (sessions != null) {
-            // 💡 해당 내선번호로 연결된 모든 창(메인, 팝업 등)에 메시지 브로드캐스트
+        if (sessions != null && !sessions.isEmpty()) {
+            for (WebSocketSession session : sessions) {
+                if (session.isOpen()) {
+                    Map<String, Object> attrs = session.getAttributes();
+                    Object userObj = attrs.get("user_session");
+                    if (userObj instanceof com.crmbank.erp.comm.dto.UserSession) {
+                        String cmpycd = ((com.crmbank.erp.comm.dto.UserSession) userObj).getCmpycd();
+                        return cmpycd != null ? cmpycd.trim() : ""; // 💡 공백 제거(Trim) 추가
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    public void sendMessage(String exten, String message) {
+        if (exten == null) return;
+        String cleanExt = exten.trim(); // 💡 공백 제거로 정확한 매칭 유도
+        List<WebSocketSession> sessions = SESSIONS.get(cleanExt);
+        
+        if (sessions != null && !sessions.isEmpty()) {
+            log.info("🚀 [CTI WS] 메시지 전송 시작 -> 내선: {}, 세션수: {}", cleanExt, sessions.size());
             for (WebSocketSession session : sessions) {
                 if (session.isOpen()) {
                     try {
                         session.sendMessage(new TextMessage(message));
                     } catch (IOException e) {
-                        log.error("❌ [CTI WS] 전송 실패 (내선: {}): {}", exten, e.getMessage());
+                        log.error("❌ [CTI WS] 전송 실패 (내선: {}): {}", cleanExt, e.getMessage());
                     }
                 }
             }
+        } else {
+            log.warn("⚠️ [CTI WS] 전송 실패: 내선 [{}]에 연결된 세션이 없습니다.", cleanExt);
         }
     }
 }

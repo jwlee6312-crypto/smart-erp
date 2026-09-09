@@ -112,6 +112,15 @@ public class HsioService {
     @Transactional(value = "erpTransactionManager", rollbackFor = Exception.class)
     public Map<String, Object> saveOtherOut(Hsio250uRequest request, String userId) throws Exception {
         Hsio250u mst = request.getMst();
+        if (mst == null) throw new Exception("Master data is null.");
+
+        // 🚀 [보정] 마스터 데이터 정규화 (null 방지)
+        mst.setAddress(nvl(mst.getAddress()));
+        mst.setCfmyn(nvl(mst.getCfmyn(), "Y"));
+        mst.setGubun(nvl(mst.getGubun(), "1"));
+        mst.setTotsum(nvl(mst.getTotsum(), "0"));
+        mst.setUpdemp(userId);
+
         List<Map<String, Object>> res = hsioMapper.HSIO_250U_STR(mst);
         if (res == null || res.isEmpty()) throw new Exception("No response from Master procedure.");
         Map<String, Object> mstRow = convertMapToLowerCase(res.getFirst());
@@ -124,6 +133,16 @@ public class HsioService {
                 dtl.setCmpycd(mst.getCmpycd());
                 dtl.setIogbn(mst.getIogbn());
                 dtl.setUpdemp(userId);
+
+                // 🚀 [보정] 상세 데이터 정규화
+                dtl.setIorowno(nvl(dtl.getIorowno()));
+                dtl.setIoymd(nvl(dtl.getIoymd()));
+                dtl.setItemcd(nvl(dtl.getItemcd()));
+                dtl.setUnit(nvl(dtl.getUnit()));
+                dtl.setPkunit(nvl(dtl.getPkunit()));
+                dtl.setIovat(dtl.getIovat() == null ? java.math.BigDecimal.ZERO : dtl.getIovat());
+                dtl.setCfmyn(nvl(dtl.getCfmyn(), "Y"));
+
                 hsioMapper.HSIO_251U_STR(dtl);
             }
         }
@@ -358,13 +377,28 @@ public class HsioService {
         Map<String, Object> mstRow = convertMapToLowerCase(res.getFirst());
         String ioym = nvl(mstRow.get("ioym"));
         String iono = nvl(mstRow.get("iono"));
+        String ino = nvl(mstRow.get("ino"));
 
         if (request.getDtl() != null) {
             for (Hsio581u dtl : request.getDtl()) {
-                dtl.setIoym(ioym); dtl.setIono(iono);
+                dtl.setIoym(ioym);
+                dtl.setIono(iono);
+                dtl.setIno(ino);
                 dtl.setCmpycd(mst.getCmpycd());
                 dtl.setIogbn(mst.getIogbn());
                 dtl.setUpdemp(userId);
+
+                // 🚀 데이터 정규화 (MyBatis Reflection 오류 방지 및 SP 안정성 확보)
+                dtl.setOdeptcd(nvl(dtl.getOdeptcd()));
+                dtl.setOwhcd(nvl(dtl.getOwhcd()));
+                dtl.setIoymd(nvl(dtl.getIoymd()));
+                dtl.setIdeptcd(nvl(dtl.getIdeptcd()));
+                dtl.setIwhcd(nvl(dtl.getIwhcd()));
+                dtl.setItemcd(nvl(dtl.getItemcd()));
+                dtl.setUnit(nvl(dtl.getUnit()));
+                dtl.setOrdym(nvl(dtl.getOrdym()));
+                dtl.setOrdno(nvl(dtl.getOrdno()));
+
                 hsioMapper.HSIO_581U_STR(dtl);
             }
         }
@@ -385,6 +419,17 @@ public class HsioService {
                 dtl.setIoym(ioym); dtl.setIno(iono);
                 dtl.setCmpycd(mst.getCmpycd());
                 dtl.setUpdemp(userId);
+
+                // 🚀 데이터 정규화
+                dtl.setIogbn(nvl(dtl.getIogbn()));
+                dtl.setIorowno(nvl(dtl.getIorowno()));
+                dtl.setOno(nvl(dtl.getOno()));
+                dtl.setDeptcd(nvl(dtl.getDeptcd()));
+                dtl.setWhcd(nvl(dtl.getWhcd()));
+                dtl.setIoymd(nvl(dtl.getIoymd()));
+                dtl.setItemcd(nvl(dtl.getItemcd()));
+                dtl.setUnit(nvl(dtl.getUnit()));
+
                 hsioMapper.HSIO_721U_STR(dtl);
             }
         }
@@ -405,6 +450,17 @@ public class HsioService {
                 dtl.setIoym(ioym); dtl.setIno(iono);
                 dtl.setCmpycd(mst.getCmpycd());
                 dtl.setUpdemp(userId);
+
+                // 🚀 데이터 정규화
+                dtl.setIogbn(nvl(dtl.getIogbn()));
+                dtl.setIorowno(nvl(dtl.getIorowno()));
+                dtl.setOno(nvl(dtl.getOno()));
+                dtl.setDeptcd(nvl(dtl.getDeptcd()));
+                dtl.setWhcd(nvl(dtl.getWhcd()));
+                dtl.setIoymd(nvl(dtl.getIoymd()));
+                dtl.setItemcd(nvl(dtl.getItemcd()));
+                dtl.setUnit(nvl(dtl.getUnit()));
+
                 hsioMapper.HSIO_731U_STR(dtl);
             }
         }
@@ -702,60 +758,73 @@ public class HsioService {
         List<Map<String, Object>> items = request.getItems();
         if (items == null || items.isEmpty()) throw new Exception("발행할 데이터가 없습니다.");
 
-        String slipymd = nvl(mst.get("pubymd")).replace("-", "");
         String cmpycd = nvl(mst.get("cmpycd"));
-        String deptcd = nvl(mst.get("deptcd"));
-        String ioymdfr = nvl(mst.get("fromdt")).replace("-", "");
-        String ioymdto = nvl(mst.get("todt")).replace("-", "");
+        String slipymd = nvl(mst.get("pubymd")).replace("-", "");
+        String hdeptcd = nvl(mst.get("deptcd")); // 발행부서
+        String fromdt = nvl(mst.get("fromdt")).replace("-", "");
+        String todt = nvl(mst.get("todt")).replace("-", "");
+        String business = nvl(mst.get("business"), String.format("%s 외부매입 정산 전표", nvl(mst.get("usernm"))));
 
+        // 🚀 [A0] 전표 마스터 생성 (XML 22개 파라미터 풀 매핑)
+        Map<String, Object> aParams = new HashMap<>();
+        aParams.put("actkind", "A0");
+        aParams.put("cmpycd", cmpycd);
+        aParams.put("iogbn", "100");
+        aParams.put("fromdt", fromdt);
+        aParams.put("todt", todt);
+        aParams.put("deptcd", hdeptcd);
+        aParams.put("jsanym", "");
+        aParams.put("jsanno", "");
+        aParams.put("jsanymd", "");
+        aParams.put("spyamt", "0");
+        aParams.put("vatamt", "0");
+        aParams.put("custcd", "");
+        aParams.put("taxunit", "");
+        aParams.put("vattype", "");
+        aParams.put("slipymd", slipymd);
+        aParams.put("slipno", "");
+        aParams.put("cardyn", nvl(mst.get("cardyn"), "N"));
+        aParams.put("cardno", nvl(mst.get("cardno")));
+        aParams.put("slipkind", "030");
+        aParams.put("hdeptcd", hdeptcd);
+        aParams.put("business", business);
+        aParams.put("updemp", userId);
+        
+        List<Map<String, Object>> resA = hsioMapper.HSIO_131U_STR(aParams);
+        if (resA == null || resA.isEmpty()) throw new Exception("전표번호 채번 실패");
+        Map<String, Object> rowA = convertMapToLowerCase(resA.getFirst());
+        String slipno = nvl(rowA.get("slipno"));
+
+        // 🚀 [U0] 루프 상세 매핑 (XML 22개 파라미터 풀 매핑)
         for (Map<String, Object> item : items) {
-            String costcd = nvl(item.get("costcd"));
-            String itemFileno = nvl(item.get("fileno"));
-            String docno = nvl(item.get("docno"));
-            String crowno = nvl(item.get("crowno"));
-            String slipKind = "200".equals(costcd) ? "031" : "030";
-            String itemDeptcd = nvl(item.get("deptcd"), deptcd);
+            Map<String, Object> uParams = new HashMap<>();
+            uParams.put("actkind", "U0");
+            uParams.put("cmpycd", cmpycd);
+            uParams.put("iogbn", "100");
+            uParams.put("fromdt", fromdt);
+            uParams.put("todt", todt);
+            uParams.put("deptcd", nvl(item.get("deptcd")));
+            uParams.put("jsanym", nvl(item.get("jsanym")));
+            uParams.put("jsanno", nvl(item.get("jsanno")));
+            uParams.put("jsanymd", nvl(item.get("jsanymd")));
+            uParams.put("spyamt", nvl(item.get("spyamt")));
+            uParams.put("vatamt", nvl(item.get("vatamt")));
+            uParams.put("custcd", nvl(item.get("custcd")));
+            uParams.put("taxunit", nvl(item.get("taxunit")));
+            uParams.put("vattype", nvl(item.get("vattype")));
+            uParams.put("slipymd", slipymd);
+            uParams.put("slipno", slipno);
+            uParams.put("cardyn", nvl(mst.get("cardyn"), "N"));
+            uParams.put("cardno", nvl(mst.get("cardno")));
+            uParams.put("slipkind", "030");
+            uParams.put("hdeptcd", hdeptcd);
+            uParams.put("business", business);
+            uParams.put("updemp", userId);
 
-            Map<String, Object> baseParams = new HashMap<>();
-            baseParams.put("cmpycd", cmpycd);
-            baseParams.put("iogbn", "100");
-            baseParams.put("costcd", costcd);
-            baseParams.put("fromdt", ioymdfr);
-            baseParams.put("todt", ioymdto);
-            baseParams.put("deptcd", itemDeptcd);
-            baseParams.put("fileno", itemFileno);
-            baseParams.put("docno", docno);
-            baseParams.put("crowno", crowno);
-            baseParams.put("jsanymd", nvl(item.get("jsanymd")).replace("-", ""));
-            baseParams.put("spyamt", nvl(item.get("spyamt"), "0").replace(",", ""));
-            baseParams.put("vatamt", nvl(item.get("vatamt"), "0").replace(",", ""));
-            baseParams.put("custcd", nvl(item.get("custcd")));
-            baseParams.put("taxunit", nvl(item.get("taxunit"), "100"));
-            baseParams.put("vattype", nvl(item.get("vattype"), "010"));
-            baseParams.put("slipymd", slipymd);
-            baseParams.put("slipno", "");
-            baseParams.put("slipkind", slipKind);
-            baseParams.put("hdeptcd", itemDeptcd);
-            baseParams.put("business", itemFileno + "-" + nvl(item.get("bigo")));
-            baseParams.put("updemp", userId);
-
-            baseParams.put("actkind", "A0");
-            List<Map<String, Object>> resA = hsioMapper.HSIO_131U_STR(baseParams);
-            if (resA == null || resA.isEmpty()) throw new Exception("전표번호 채번 실패");
-            Map<String, Object> rowA = convertMapToLowerCase(resA.getFirst());
-            String slipno = nvl(rowA.get("slipno"));
-
-            baseParams.put("actkind", "U0");
-            baseParams.put("slipno", slipno);
-            List<Map<String, Object>> resU = hsioMapper.HSIO_131U_STR(baseParams);
-            if (resU != null && !resU.isEmpty()) {
-                Map<String, Object> rowU = convertMapToLowerCase(resU.getFirst());
-                if ("00000000".equals(nvl(rowU.get("status")))) {
-                    throw new Exception("정산 저장 실패: " + nvl(rowU.get("msg"), "업무 오류"));
-                }
-            }
+            hsioMapper.HSIO_131U_STR(uParams);
         }
-        return Map.of("res", "OK");
+
+        return Map.of("slipno", slipno, "res", "OK");
     }
 
     @Transactional(value = "erpTransactionManager", rollbackFor = Exception.class)

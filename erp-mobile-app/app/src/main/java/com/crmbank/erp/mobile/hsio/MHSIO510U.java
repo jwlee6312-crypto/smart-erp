@@ -119,6 +119,16 @@ public class MHSIO510U extends BaseActivity {
     }
 
     private void loadOptions() {
+        // 단가 기준 (Price GBN) 조회 추가
+        apiService.executeHa00Procedure("HA00_010S_STR", new HashMap<String, Object>() {{
+            put("cmpycd", cmpycd); put("gbn", "p1");
+        }}).enqueue(new Callback<List<Map<String, Object>>>() {
+            @Override public void onResponse(@NonNull Call<List<Map<String, Object>>> call, @NonNull Response<List<Map<String, Object>>> response) {
+                // 필요 시 전역 변수에 저장 가능 (현재는 정산 필드 조회 로직 우선 적용)
+            }
+            @Override public void onFailure(@NonNull Call<List<Map<String, Object>>> call, @NonNull Throwable t) {}
+        });
+
         // 사업장 (SA)
         apiService.executeHa00Procedure("HA00_00P_STR", new HashMap<String, Object>() {{
             put("gubun", "SA"); put("cmpycd", cmpycd);
@@ -218,9 +228,19 @@ public class MHSIO510U extends BaseActivity {
             @Override public void onResponse(@NonNull Call<List<Map<String, Object>>> call, @NonNull Response<List<Map<String, Object>>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     detailList.clear();
-                    for (Map<String, Object> item : response.body()) {
-                        item.put("_checked", true); // 기본 전체 선택
-                        detailList.add(item);
+                    for (Map<String, Object> i : response.body()) {
+                        // 🚀 [로직 동기화] 기정산된 수량/금액을 차감하여 잔량 계산
+                        double remQty = getDoubleVal(i, "jsanqty") - getDoubleVal(i, "jqty");
+                        double remAmt = getDoubleVal(i, "jsanamt") - getDoubleVal(i, "jamt");
+                        double remVat = getDoubleVal(i, "jsanvat") - getDoubleVal(i, "jvat");
+
+                        // 계산된 잔량을 별도 키로 저장 (저장 시 사용)
+                        i.put("_remqty", remQty);
+                        i.put("_remamt", remAmt);
+                        i.put("_remvat", remVat);
+                        i.put("_checked", true); // 기본 전체 선택
+                        
+                        detailList.add(i);
                     }
                     adapter.notifyDataSetChanged();
                     updateTotalAmt();
@@ -234,7 +254,7 @@ public class MHSIO510U extends BaseActivity {
         double total = 0;
         for (Map<String, Object> item : detailList) {
             if (Boolean.TRUE.equals(item.get("_checked"))) {
-                total += getDoubleVal(item, "jsanamt") + getDoubleVal(item, "jsanvat");
+                total += getDoubleVal(item, "_remamt") + getDoubleVal(item, "_remvat");
             }
         }
         etTotalAmt.setText(df.format(total));
@@ -278,9 +298,10 @@ public class MHSIO510U extends BaseActivity {
             d.put("ioym", item.get("ioym"));
             d.put("iono", item.get("iono"));
             d.put("iorowno", item.get("iorowno"));
-            d.put("jsanqty", item.get("jsanqty"));
-            d.put("jsanamt", item.get("jsanamt"));
-            d.put("jsanvat", item.get("jsanvat"));
+            // 🚀 계산된 잔량으로 저장 필드 전송
+            d.put("jsanqty", item.get("_remqty"));
+            d.put("jsanamt", item.get("_remamt"));
+            d.put("jsanvat", item.get("_remvat"));
             dtl.add(d);
         }
 
@@ -369,7 +390,8 @@ public class MHSIO510U extends BaseActivity {
             ((TextView) v.findViewById(R.id.tvSalsYmd)).setText(getStringVal(item, "salsymd"));
             ((TextView) v.findViewById(R.id.tvItemName)).setText(getStringVal(item, "itemnm"));
             
-            double amt = getDoubleVal(item, "jsanamt") + getDoubleVal(item, "jsanvat");
+            // 🚀 잔량 금액 표시 (공급가액 + 부가세)
+            double amt = getDoubleVal(item, "_remamt") + getDoubleVal(item, "_remvat");
             ((TextView) v.findViewById(R.id.tvSumAmt)).setText(df.format(amt));
             
             return v;

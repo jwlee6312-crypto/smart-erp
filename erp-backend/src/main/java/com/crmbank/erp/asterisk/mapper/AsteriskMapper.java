@@ -31,4 +31,8 @@ public interface AsteriskMapper {
     // 5. ARS 스크립트 관리
     List<Map<String, Object>> selectArsScripts(Map<String, Object> params);
     int upsertArsScript(Map<String, Object> params);
+
+    // 💡 [추가] 전역 변수(업무모드) 관리
+    List<Map<String, Object>> selectVariables(Map<String, Object> params);
+    int upsertVariable(Map<String, Object> params);
 }

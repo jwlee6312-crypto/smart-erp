@@ -81,10 +81,10 @@ const closeAllTabs = () => {
 
 /** 🚀 우측 패널 도움말 열기 (기존 방식 유지) */
 const openManualPanel = () => {
-  const activeId = tabStore.activeTabId
-  if (!activeId) return alert('도움말을 보려면 프로그램을 먼저 선택하세요.')
-  // manualStore를 사용하여 우측 슬라이딩 패널을 엽니다.
-  manualStore.open(activeId)
+  const activeTab = tabStore.activeTab
+  if (!activeTab) return alert('도움말을 보려면 프로그램을 먼저 선택하세요.')
+  // 💡 중복 탭 지원에 따라 path가 아닌 실제 pgmId를 전달하도록 수정
+  manualStore.open(activeTab.pgmId)
 }
 </script>
 

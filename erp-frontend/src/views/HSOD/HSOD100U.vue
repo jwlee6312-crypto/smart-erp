@@ -250,7 +250,9 @@ const updateRowStatus = (row: any) => {
 
 const calcRow = (row: any) => {
   const d = row.getData();
-  const amt = Math.floor(Number(d.ordqty || 0) * Number(d.price || 0));
+  const qty = Number(d.ordqty || 0);
+  const price = Number(d.price || 0);
+  const amt = Math.round(qty * price);
   const vat = Math.floor(amt * 0.1);
   row.update({ ordamt: amt, ordvat: vat, amtsum: amt + vat });
   updateRowStatus(row);
@@ -258,9 +260,11 @@ const calcRow = (row: any) => {
 
 const calcRowAmt = (row: any) => {
   const d = row.getData();
+  const qty = Number(d.ordqty || 0);
   const amt = Number(d.ordamt || 0);
   const vat = Math.floor(amt * 0.1);
-  row.update({ ordvat: vat, amtsum: amt + vat });
+  const price = qty > 0 ? Math.round(amt / qty) : Number(d.price || 0);
+  row.update({ ordvat: vat, amtsum: amt + vat, price: price });
   updateRowStatus(row);
 }
 
@@ -274,10 +278,12 @@ const calcRowVat = (row: any) => {
 
 const calcRowTotal = (row: any) => {
   const d = row.getData();
+  const qty = Number(d.ordqty || 0);
   const total = Number(d.amtsum || 0);
   const amt = Math.round(total / 1.1);
   const vat = total - amt;
-  row.update({ ordamt: amt, ordvat: vat });
+  const price = qty > 0 ? Math.round(amt / qty) : Number(d.price || 0);
+  row.update({ ordamt: amt, ordvat: vat, price: price });
   updateRowStatus(row);
 }
 
@@ -314,11 +320,13 @@ async function save() {
   if (!details.length && form_02.ordno === '0000') return vAlertError('항목을 추가하세요.');
 
   try {
+    const totalAmtSum = details.reduce((acc, cur) => acc + (Number(cur.ordamt) || 0), 0);
     const mst = {
     ...form_02,
     actkind: form_02.ordno === '0000' ? 'A0' : 'U0',
     ordymd: form_02.ordymd.replace(/-/g, ''),
     outymd: form_02.outymd.replace(/-/g, ''),
+    totsum: totalAmtSum,
     sts: 'Y',
     updemp: authStore.userid };
     const dtl = details.map((d: any) => ({ ...d, actkind: d._status === '입력' ? 'A0' : (d._status === '삭제' ? 'D0' : 'U0'), updemp: authStore.userid }));

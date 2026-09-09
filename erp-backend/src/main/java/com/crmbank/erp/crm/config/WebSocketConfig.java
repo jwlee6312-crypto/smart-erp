@@ -24,31 +24,24 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        // 💡 모든 도메인 허용 및 인터셉터 간소화로 연결 무조건 성공 보장
         registry.addHandler(ctiWebSocketHandler, "/ws/cti")
+                .setAllowedOrigins("*")
                 .addInterceptors(new HttpSessionHandshakeInterceptor() {
                     @Override
                     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, 
                                                  WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
+                        // 💡 [기존 로직 활용] 부모 클래스의 메서드를 호출하여 세션 속성을 자동으로 복사합니다.
+                        super.beforeHandshake(request, response, wsHandler, attributes);
                         
-                        // 💡 [진단 로그] 브라우저로부터 들어온 모든 신호를 가감 없이 출력합니다.
                         String query = request.getURI().getQuery();
-                        log.info("📡 [CTI WS] 연결 시도 감지 - URI: {}, Remote: {}", request.getURI(), request.getRemoteAddress());
-
                         if (query != null && query.contains("exten=")) {
-                            try {
-                                String exten = query.split("exten=")[1].split("&")[0];
-                                attributes.put("inner_no", exten);
-                                log.info("🎯 [인증 성공] 내선번호 [{}] 소켓 세션 매핑 완료", exten);
-                            } catch (Exception e) {
-                                log.error("❌ [인증 실패] 쿼리 파싱 에러: {}", e.getMessage());
-                            }
-                        } else {
-                            log.warn("⚠️ [경고] 내선번호(exten) 정보가 요청에 포함되지 않았습니다.");
+                            String exten = query.split("exten=")[1].split("&")[0];
+                            attributes.put("inner_no", exten);
+                            log.info("🎯 [WebSocket] 내선번호 [{}] 회사코드 연동 완료", exten);
                         }
-
-                        return super.beforeHandshake(request, response, wsHandler, attributes);
+                        return true;
                     }
-                })
-                .setAllowedOrigins("*");
+                });
     }
 }

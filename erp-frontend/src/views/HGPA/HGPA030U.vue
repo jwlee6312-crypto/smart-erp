@@ -4,7 +4,7 @@
     프로그램 ID	: HGPA030U
 	작성일자	    : 2025.03.14
 	작성자      : AI Assistant
-    설명        : 교환기 다이얼플랜(Extensions) 설정 및 관리 (표준 UI 적용)
+    설명        : 교환기 다이얼플랜 설정 및 업무 모드(수동) 전환 관리
 	=============================================================
 -->
 
@@ -24,13 +24,30 @@
                 <button class="btn-erp btn-init" @click="initialize">초기화</button>
                 <button class="btn-erp btn-search" @click="search">조회</button>
                 <button class="btn-erp btn-save" @click="save">저장</button>
-                <button class="btn-erp btn-delete" @click="deleteSelected">삭제</button>
             </div>
         </div>
 
         <!-- 💡 2. 메인 컨텐츠 영역 -->
         <div class="flex-grow-1 overflow-hidden p-2 d-flex flex-column gap-2 bg-light main-content-wrapper">
-            <!-- [상단] 조회 필터 -->
+
+            <!-- [상단] 업무 모드 수동 제어 (추가된 기능) -->
+            <div class="card border-0 shadow-sm flex-shrink-0 overflow-hidden mb-1" style="border-left: 5px solid #0d6efd !important;">
+                <div class="card-body p-3 bg-white d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fw-bold text-dark"><i class="bi bi-gear-wide-connected me-2 text-primary"></i>현재 ARS 운영 모드:</span>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm px-3 fw-bold" :class="currentMode === 'OPEN' ? 'btn-success' : 'btn-outline-secondary'" @click="updateMode('OPEN')">업무 중</button>
+                            <button class="btn btn-sm px-3 fw-bold" :class="currentMode === 'CLOSE' ? 'btn-danger' : 'btn-outline-secondary'" @click="updateMode('CLOSE')">퇴근/야간</button>
+                            <button class="btn btn-sm px-3 fw-bold" :class="currentMode === 'HOLIDAY' ? 'btn-warning' : 'btn-outline-secondary'" @click="updateMode('HOLIDAY')">휴일 모드</button>
+                        </div>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i> 버튼 클릭 시 999번 ARS 시나리오가 즉시 전환됩니다.
+                    </div>
+                </div>
+            </div>
+
+            <!-- [중단] 조회 필터 -->
             <div class="card border shadow-sm flex-shrink-0 overflow-hidden">
                 <div class="card-body p-2 bg-white">
                     <div class="d-flex align-items-center flex-wrap gap-3 small">
@@ -48,7 +65,6 @@
 
             <!-- [하단] 레이아웃 영역 -->
             <div class="row g-1 flex-grow-1 overflow-hidden">
-                <!-- ⬅️ 좌측: 다이얼플랜 리스트 -->
                 <div class="col-md-9 h-100 d-flex flex-column">
                     <div class="card border shadow-sm h-100 d-flex flex-column overflow-hidden">
                         <div class="card-header bg-white py-1 px-3 border-bottom d-flex justify-content-between align-items-center">
@@ -61,7 +77,6 @@
                     </div>
                 </div>
 
-                <!-- ➡️ 우측: 가이드/설명 -->
                 <div class="col-md-3 h-100 overflow-auto">
                     <div class="card border shadow-sm h-100 overflow-hidden">
                         <div class="card-header bg-white py-1 px-3 border-bottom">
@@ -69,17 +84,14 @@
                         </div>
                         <div class="card-body p-3 bg-white small text-start">
                             <div class="mb-3">
-                                <p class="mb-1 text-primary fw-bold"><i class="bi bi-telephone-outbound-fill me-1"></i>내선 통화 (Dial)</p>
-                                <code class="d-block p-2 bg-light border text-dark rounded">app: Dial, data: pjsip/101</code>
-                                <p class="text-muted mt-1" style="font-size: 11px;">지정한 내선번호로 전화를 거는 기본 명령입니다.</p>
+                                <p class="mb-1 text-primary fw-bold">부서 연결 (Queue)</p>
+                                <code class="d-block p-2 bg-light border text-dark rounded">app: Queue, data: 8000,tT</code>
+                                <p class="text-muted mt-1" style="font-size: 11px;">지정한 대기열로 연결합니다.</p>
                             </div>
                             <div class="mb-3">
-                                <p class="mb-1 text-primary fw-bold"><i class="bi bi-volume-up-fill me-1"></i>안내 재생 (Playback)</p>
-                                <code class="d-block p-2 bg-light border text-dark rounded">app: Playback, data: custom/welcome</code>
-                                <p class="text-muted mt-1" style="font-size: 11px;">준비된 음성 파일을 재생합니다.</p>
-                            </div>
-                            <div class="alert alert-info py-2 px-3 border-0" style="font-size: 11px;">
-                                <i class="bi bi-info-circle-fill me-1"></i> Priority는 실행 순서를 의미하며, 동일한 Exten 내에서 낮은 숫자부터 실행됩니다.
+                                <p class="mb-1 text-primary fw-bold">안내 재생 (Background)</p>
+                                <code class="d-block p-2 bg-light border text-dark rounded">app: Background, data: custom/01_welcome</code>
+                                <p class="text-muted mt-1" style="font-size: 11px;">메뉴 선택이 가능한 안내음을 재생합니다.</p>
                             </div>
                         </div>
                     </div>
@@ -100,6 +112,7 @@ import { api } from '@/utils/axios'
 const { showAlert, showError, vAlert, vAlertError, alertMessage } = useAlerts()
 
 const searchForm = reactive({ context: '', exten: '' })
+const currentMode = ref('OPEN')
 const tableRef = ref<HTMLDivElement | null>(null)
 let tableInstance: Tabulator | null = null
 
@@ -108,10 +121,7 @@ const initTable = () => {
 	if (!tableRef.value) return
     if (tableInstance) tableInstance.destroy();
 	tableInstance = new Tabulator(tableRef.value, {
-		placeholder: '데이터가 없습니다.',
-		layout: 'fitColumns',
-		selectable: true,
-		height: '100%',
+		placeholder: '데이터가 없습니다.', layout: 'fitColumns', selectable: true, height: '100%',
         columnDefaults: { headerSort: false, headerHozAlign: 'center', vertAlign: 'middle' },
 		columns: [
 			{ formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center", width: 40 },
@@ -127,66 +137,51 @@ const initTable = () => {
 async function search() {
 	try {
 		const { data } = await api.get('/crm/asterisk/extension/search', { params: searchForm })
-        if (Array.isArray(data)) {
-            await tableInstance?.setData(data)
-            if(data.length > 0) vAlert(`${data.length}건이 조회되었습니다.`)
-        }
+        tableInstance?.setData(data || [])
+        vAlert('조회되었습니다.')
+        fetchCurrentMode()
 	} catch (error) { vAlertError('조회 중 오류가 발생했습니다.') }
 }
 
+async function fetchCurrentMode() {
+    try {
+        const { data } = await api.get('/crm/asterisk/variable/search', { params: { var_name: 'BUSINESS_MODE' } });
+        if (data && data.length > 0) currentMode.value = data[0].var_value;
+    } catch (e) {}
+}
+
+async function updateMode(mode: string) {
+    try {
+        // 💡 [수정] 백엔드 API 경로 확인 및 데이터 형식 보정
+        await api.post('/crm/asterisk/variable/save', [{ var_name: 'BUSINESS_MODE', var_value: mode }]);
+        currentMode.value = mode;
+        vAlert(`✅ 업무 모드가 [${mode === 'OPEN' ? '업무 중' : mode === 'CLOSE' ? '퇴근' : '휴일'}] 로 변경되었습니다.`);
+    } catch (e) {
+        console.error('모드 변경 실패:', e);
+        vAlertError('모드 변경에 실패했습니다. 백엔드 연결을 확인하세요.');
+    }
+}
+
 function addRow() {
-    tableInstance?.addRow({
-        context: 'from-internal',
-        exten: '',
-        priority: 1,
-        app: '',
-        appdata: ''
-    }, true)
+    tableInstance?.addRow({ context: 'from-internal', exten: '', priority: 1, app: '', appdata: '' }, true)
 }
 
 async function save() {
     const data = tableInstance?.getData()
-    if (!data || data.length === 0) return vAlertError('저장할 데이터가 없습니다.');
-    if (!confirm('저장하시겠습니까?')) return
-
-    try {
-        const res = await api.post('/crm/asterisk/extension/save', data);
-        if (res.data?.[0]?.result === 'N') return vAlertError(res.data[0].msg || '저장 실패');
-        vAlert('성공적으로 저장되었습니다.');
+    if (!data || data.length === 0) return
+	try {
+		await api.post('/crm/asterisk/extension/save', data)
+		vAlert('성공적으로 저장되었습니다.');
         search();
-    } catch (e) { vAlertError('저장 중 오류가 발생했습니다.') }
+	} catch (e) { vAlertError('저장 중 오류가 발생했습니다.') }
 }
 
-async function deleteSelected() {
-    const selectedData = tableInstance?.getSelectedData();
-    if (!selectedData || selectedData.length === 0) return vAlertError('삭제할 행을 선택하세요.');
-    if (confirm('정말로 삭제하시겠습니까?')) {
-        try {
-            const res = await api.post('/crm/asterisk/extension/delete', selectedData);
-            if (res.data?.[0]?.result === 'N') return vAlertError(res.data[0].msg || '삭제 실패');
-            vAlert('삭제되었습니다.');
-            search();
-        } catch (e) { vAlertError('삭제 중 오류가 발생했습니다.') }
-    }
-}
-
-function initialize() {
-    Object.assign(searchForm, { context: '', exten: '' });
-    tableInstance?.clearData();
-    vAlert('초기화되었습니다.');
-}
-
-onMounted(() => {
-    nextTick(() => {
-        initTable()
-        search()
-    })
-})
-
+onMounted(() => { nextTick(() => { initTable(); search(); }) })
 onUnmounted(() => { if (tableInstance) tableInstance.destroy(); })
 </script>
 
 <style scoped>
 .erp-container { font-family: 'Pretendard', sans-serif; letter-spacing: -0.02rem; }
 .tabulator-instance { width: 100% !important; background-color: #fff; font-size: 12px; }
+.erp-label { min-width: 80px; font-weight: 500; font-size: 13px; }
 </style>

@@ -1,5 +1,6 @@
 import { api } from '@/utils/axios'
 import type { AxiosResponse } from 'axios'
+import { useAuthStore } from '@/stores/authStore'
 
 export interface SelectData {
 	CODECD: string
@@ -21,26 +22,25 @@ export async function fetchCrmSelectData(CDTYPE: string): Promise<SelectData[]> 
 }
 
 /**
- * 범용 셀렉트 데이터 조회 (대문자 표준)
+ * 범용 셀렉트 데이터 조회
  */
 export async function fetchSelectDataList<T>(url: string, params?: any): Promise<T[]> {
 	try {
-		let requestParams: any = {};
+		const authStore = useAuthStore()
 
-		if (typeof params === 'string') {
-			requestParams = { CDTYPE: params };
-		} else if (params) {
-			Object.keys(params).forEach(key => {
-				requestParams[key.toUpperCase()] = params[key];
-			});
+		// 🚀 Mybatis #{cmpycd} 바인딩을 위해 회사코드 필수 포함
+		const requestParams = {
+			...params,
+			cmpycd: authStore.cmpycd
 		}
 
 		const res: AxiosResponse<any> = await api.get(url, {
 			params: requestParams,
 		})
 
-		const list = res.data || []
-		return Array.isArray(list) ? list : []
+		// 💡 axios.ts 인터셉터에서 이미 'data' 껍데기를 벗기고 키를 소문자로 변환함
+		// 💡 따라서 res.data는 이미 순수 데이터 배열임
+		return Array.isArray(res.data) ? res.data : []
 	} catch (e) {
 		console.error(`[fetchSelectDataList] ${url} 조회 실패:`, e)
 		return []
@@ -63,7 +63,7 @@ export interface SelectPdLineData {
 }
 
 export async function fetchLineData(): Promise<SelectPdLineData[]> {
-	return fetchSelectDataList<SelectPdLineData>('/hp00/HP00_000S_STR', { GUBUN: 'L0' })
+	return fetchSelectDataList<SelectPdLineData>('/hp00/HP00_000S_STR', { gubun: 'L0' })
 }
 
 /**
@@ -75,5 +75,5 @@ export interface SelectPdProgData {
 }
 
 export async function fetchProgData(linecd: string): Promise<SelectPdProgData[]> {
-	return fetchSelectDataList<SelectPdProgData>('/hp00/HP00_000S_STR', { GUBUN: 'G0', GBNCD: linecd })
+	return fetchSelectDataList<SelectPdProgData>('/hp00/HP00_000S_STR', { gubun: 'G0', gbncd: linecd })
 }

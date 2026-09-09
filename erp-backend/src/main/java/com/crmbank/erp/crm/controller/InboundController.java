@@ -251,31 +251,38 @@ public class InboundController {
         return result;
     }
 
-    @GetMapping("/play-recording")
+    @GetMapping(value = "/play-recording", produces = "audio/wav")
     public ResponseEntity<Resource> playRecording(@RequestParam String file) {
-        // 🚀 Windows 호스트에서 WSL(Ubuntu) 파일 시스템에 접근하기 위한 정규화된 경로 사용
-        String wslBase = "\\\\wsl.localhost\\Ubuntu";
+        log.info("📢 [재생 요청 수신] 파일명: {}", file);
         
-        // 슬래시 방향을 윈도우 스타일로 통일하여 경로 충돌 방지
-        String safeFile = file.replace("/", "\\");
-        if (safeFile.startsWith("\\")) safeFile = safeFile.substring(1);
+        // 🚀 [수정] 도커/리눅스 환경에 맞게 경로 처리 (WSL 경로 제거)
+        String safeFile = file.replace("\\", "/");
+        if (safeFile.startsWith("/")) safeFile = safeFile.substring(1);
+
+        String fileNameOnly = new File(safeFile).getName();
         
-        // 1. 기본 녹취 경로 (MixMonitor)
-        File monitorFile = new File(wslBase + "\\var\\spool\\asterisk\\monitor\\" + safeFile);
-        // 2. ARS 음원 및 콜백 메세지 경로
-        File soundFile = new File(wslBase + "\\var\\lib\\asterisk\\sounds\\" + safeFile);
+        // 1순위: /var/lib/asterisk/sounds/custom/ (TTS 생성 폴더)
+        File customSoundFile = new File("/var/lib/asterisk/sounds/custom/" + fileNameOnly);
+        // 2순위: /var/spool/asterisk/monitor/ (상담 녹취 폴더)
+        File monitorFile = new File("/var/spool/asterisk/monitor/" + fileNameOnly);
+        // 3순위: 기타 (풀 경로 요청 시)
+        File fallbackFile = new File("/var/lib/asterisk/sounds/" + safeFile);
 
-        File targetFile = monitorFile.exists() ? monitorFile : (soundFile.exists() ? soundFile : null);
+        File targetFile = null;
+        if (customSoundFile.exists()) targetFile = customSoundFile;
+        else if (monitorFile.exists()) targetFile = monitorFile;
+        else if (fallbackFile.exists()) targetFile = fallbackFile;
 
-        if (targetFile == null) {
-            log.warn("🔈 [재생 실패] 파일을 찾을 수 없음: {} (검색: {}, {})", 
-                     file, monitorFile.getAbsolutePath(), soundFile.getAbsolutePath());
+        if (targetFile == null || !targetFile.exists()) {
+            log.warn("🔈 [재생 실패] 파일을 찾을 수 없음: {}", safeFile);
             return ResponseEntity.notFound().build();
         }
 
         log.info("🔈 [음원 재생] 파일 발견: {}", targetFile.getAbsolutePath());
+        
+        // 💡 [최종 수정] charset 을 제거한 순수 audio/wav 헤더 설정
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("audio/wav"))
+                .header(HttpHeaders.CONTENT_TYPE, "audio/wav")
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + targetFile.getName() + "\"")
                 .body(new FileSystemResource(targetFile));
     }

@@ -132,7 +132,7 @@ async function fetchList() {
  * 🚀 전표 취소 저장 로직 (ASP 패턴 이식 & 100% 소문자화)
  */
 async function save() {
-  const items = grid?.getData().filter((r: any) => r.procyn === true) || []
+  const items = grid?.getSelectedData() || []
   if (!items.length) return vAlertError('취소할 전표를 선택하세요.')
 
   if (!confirm('선택한 외부 매입 전표들을 정말로 취소하시겠습니까?')) return
@@ -191,10 +191,11 @@ async function save() {
 }
 
 const toggleAllRows = () => {
-  const rows = grid?.getRows(); if (!rows) return
-  const allSelected = rows.every(r => r.getData().procyn === true)
-  rows.forEach(r => r.update({ procyn: !allSelected }))
-  activeitemcount.value = grid?.getData().filter((r: any) => r.procyn === true).length || 0;
+  if (!grid) return;
+  const rows = grid.getRows();
+  const selectedRows = grid.getSelectedRows();
+  if (rows.length === selectedRows.length) grid.deselectRow();
+  else grid.selectRow();
 }
 
 function initialize() {
@@ -212,27 +213,30 @@ onUnmounted(() => {
 onMounted(async () => {
   if (gridelement.value) {
     grid = new Tabulator(gridelement.value, {
-      layout: 'fitColumns', height: '100%',
+      layout: 'fitColumns', height: '100%', selectable: true,
       columnDefaults: { headerSort: false, headerHozAlign: "center", vertAlign: "middle" },
       columns: [
-        { title: '선택', field: 'procyn', hozAlign: 'center', width: 60, formatter: 'tickCross', editor: true,
-          cellClick: (e, cell) => {
-            nextTick(() => {
-                activeitemcount.value = grid?.getData().filter((r: any) => r.procyn === true).length || 0;
-            });
-          }
-        },
-        { title: '전표일자', field: 'slipymd', width: 110, hozAlign: 'center', formatter: (c) => {
+        { title: "선택", width: 50, hozAlign: "center", formatter: "rowSelection", titleFormatter: "rowSelection", headerSort: false },
+        { title: '전표일자', field: 'slipymd', width: 120, hozAlign: 'center', formatter: (c) => {
             const v = c.getValue(); return v && v.length === 8 ? `${v.substring(0,4)}-${v.substring(4,6)}-${v.substring(6,8)}` : v;
         }},
-        { title: '전표번호', field: 'slipno', width: 100, cssClass: 'fw-bold text-primary' },
-        { title: '발행부서', field: 'deptnm', width: 140, hozAlign: 'left' },
-        { title: '거래처', field: 'custnm', minWidth: 150, widthGrow: 1, hozAlign: 'left', cssClass: 'fw-bold' },
-        { title: '유형', field: 'vattypenm', width: 100 },
-        { title: '공급가', field: 'spyamt', width: 110, hozAlign: 'right', formatter: 'money', formatterParams: { precision: 0 } },
-        { title: '부가세', field: 'vatamt', width: 100, hozAlign: 'right', formatter: 'money', formatterParams: { precision: 0 } }
+        { title: '전표번호', field: 'slipno', width: 150, cssClass: 'fw-bold text-primary',
+          formatter: (cell) => {
+            const d = cell.getRow().getData();
+            // 🚀 [보정] 전표일자-일련번호 형식으로 표시
+            return d.slipymd && d.slipno ? `${d.slipymd}-${d.slipno}` : d.slipno;
+          }
+        },
+        { title: '발행부서', field: 'deptnm', width: 180, hozAlign: 'left' },
+        { title: '거래처', field: 'custnm', minWidth: 200, widthGrow: 1, hozAlign: 'left', cssClass: 'fw-bold' },
+        { title: '유형', field: 'vattypenm', width: 150 },
+        { title: '공급가', field: 'spyamt', width: 150, hozAlign: 'right', formatter: 'money', formatterParams: { precision: 0 } },
+        { title: '부가세', field: 'vatamt', width: 150, hozAlign: 'right', formatter: 'money', formatterParams: { precision: 0 } }
       ]
-    })
+    });
+    grid.on("rowSelectionChanged", (data: any[]) => {
+        activeitemcount.value = data.length;
+    });
   }
   fetchList()
 })

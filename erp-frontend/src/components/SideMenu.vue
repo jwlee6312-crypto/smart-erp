@@ -39,7 +39,7 @@
               v-for="item in group.items"
               :key="item.pgmid"
               class="sb-nav-link"
-              :class="{ 'is-active': tabStore.activeTabId === item.pgmid }"
+              :class="{ 'is-active': tabStore.activeTab?.pgmId === item.pgmid }"
               href="javascript:void(0)"
               :title="item.pgmid"
               @click="goPage(item.pgmid, item.pgmnm, item.grpcd)"

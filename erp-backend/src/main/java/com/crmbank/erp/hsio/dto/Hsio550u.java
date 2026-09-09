@@ -24,7 +24,7 @@ public class Hsio550u {
     private String userid;
     private String trnemp;
     private String trancd;
-    private String addres;
+    private String address;
     private String d_address;
     private String remark;
     private String cfmyn;

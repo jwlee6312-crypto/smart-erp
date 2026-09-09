@@ -14,7 +14,7 @@ public class Hsio590u {
     private String todt;     // @iIOYMDTO
     private String deptcd;
     private String custcd;
-    private String salsemp;
+    private String saleuserid; // 🚀 salsemp -> saleuserid로 변경 (XML 매핑 일치)
     private String taxunit;
     private String vattype;
     private String jsanymd;

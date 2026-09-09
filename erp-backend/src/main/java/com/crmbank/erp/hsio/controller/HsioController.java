@@ -622,7 +622,11 @@ public class HsioController {
                     case "HSIO_010U_STR": result = hsioMapper.HSIO_010U_STR(params); break;
                     case "HSIO_011U_STR": result = hsioMapper.HSIO_011U_STR(params); break;
                     case "HSIO_020U_STR": result = hsioMapper.HSIO_020U_STR(params); break;
-                    case "HSIO_021U_STR": result = hsioMapper.HSIO_021U_STR(params); break;
+                    case "HSIO_021U_STR":
+                        // 분석 로직(actkind=B) 등에서 reqymd 유실 방지
+                        params.putIfAbsent("reqymd", params.getOrDefault("reqymd", ""));
+                        result = hsioMapper.HSIO_021U_STR(params);
+                        break;
                     case "HSIO_050U_STR": result = hsioMapper.HSIO_050U_STR(params); break;
                     case "HSIO_051U_STR": result = hsioMapper.HSIO_051U_STR(params); break;
                     case "HSIO_052U_STR": result = hsioMapper.HSIO_052U_STR(params); break;

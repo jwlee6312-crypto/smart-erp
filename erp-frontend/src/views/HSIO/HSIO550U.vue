@@ -313,7 +313,8 @@ const save = async () => {
             iovat: outVat,
             balym: item.ordym || item.ORDYM || '',
             balno: item.ordno || item.ORDNO || '',
-            browno: item.orowno || item.OROWNO || ''
+            browno: item.orowno || item.OROWNO || '',
+            userid: authStore.userid || ''
         };
     });
 

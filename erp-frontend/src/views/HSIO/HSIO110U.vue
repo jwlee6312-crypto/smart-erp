@@ -290,7 +290,14 @@ async function save() {
 
 function initialize() {
   resetForm(formData); poGrid?.clearData(); itemGrid?.clearData();
-  Object.assign(formData, { cmpycd: authStore.cmpycd, pubymd: today, vattype: '010' });
+  Object.assign(formData, {
+    cmpycd: authStore.cmpycd,
+    pubymd: today,
+    vattype: '010',
+    taxunit: '100', // 🚀 사업장 기본값 복구
+    deptcd: authStore.deptcd,
+    deptnm: authStore.deptnm
+  });
 }
 
 const openHelp = (type: string) => {
@@ -316,6 +323,7 @@ const openHelp = (type: string) => {
 onMounted(async () => {
   await fetchOptions();
   nextTick(() => {
+    initialize() // 🚀 [순서 변경] 초기화 먼저 수행하여 부서 정보 세팅
     if (poGridRef.value) {
       poGrid = new Tabulator(poGridRef.value, {
         layout: 'fitColumns', height: '100%', selectable: 1,
@@ -347,6 +355,7 @@ onMounted(async () => {
       })
     }
     fetchCustList()
+    initialize() // 🚀 [추가] 초기화 함수 호출하여 부서 정보 등 자동 세팅
   })
 })
 

@@ -74,10 +74,25 @@ public class HpplController {
         // 💡 사용자 정의 표준: 명시적인 Switch-Case 호출
         List<Map<String, Object>> result;
         switch (proc) {
-            case "HPPL_100U_STR": result = hpplMapper.HPPL_100U_STR(params); break;
-            case "HPPL_110S_STR": result = hpplMapper.HPPL_110S_STR(params); break;
-            case "HPPL_120U_STR": result = hpplMapper.HPPL_120U_STR(params); break;
-            case "HPPL_150U_STR": result = hpplMapper.HPPL_150U_STR(params); break;
+            case "HPPL_100U_STR":
+                params.putIfAbsent("actkind", "S1");
+                params.putIfAbsent("yymmdd", "");
+                result = hpplMapper.HPPL_100U_STR(params);
+                break;
+            case "HPPL_110S_STR":
+                // 어떤 날짜 키값이 오더라도 yymmdd로 통일하여 매퍼에 전달
+                Object ymd = params.getOrDefault("yymmdd", params.getOrDefault("iyymmdd", params.getOrDefault("iyymmDD", "")));
+                params.put("yymmdd", ymd);
+                result = hpplMapper.HPPL_110S_STR(params);
+                break;
+            case "HPPL_120U_STR":
+                params.putIfAbsent("actkind", "S");
+                result = hpplMapper.HPPL_120U_STR(params);
+                break;
+            case "HPPL_150U_STR":
+                params.putIfAbsent("actkind", "S");
+                result = hpplMapper.HPPL_150U_STR(params);
+                break;
             default:
                 result = invokeMapper(proc, params);
                 if (result == null) result = executeDirectSql(proc, params);

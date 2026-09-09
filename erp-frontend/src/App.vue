@@ -3,11 +3,14 @@ import { onMounted, watch } from 'vue'
 import { useManualStore } from '@/stores/manualStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useCtiStore } from '@/stores/ctiStore'
+import { useTabStore } from '@/stores/tabStore' // 💡 탭 이동을 위해 추가
+import { addDynamicRoute } from '@/router/dynamicRoute' // 💡 동적 라우트 추가를 위해 도입
 import ManualPopup from '@/layouts/ManualLayout.vue'
 
 const popup = useManualStore()
 const authStore = useAuthStore()
 const ctiStore = useCtiStore()
+const tabStore = useTabStore() // 💡 탭 스토어 인스턴스 생성
 
 onMounted(() => {
 	// 브라우저 알림 권한 요청
@@ -29,6 +32,26 @@ watch(() => authStore.isAuthenticated, (isAuth) => {
 		ctiStore.disconnect()
 	}
 })
+
+// 💡 [최종 종결] 인바운드 전화 수신 시 화면 자동 전환 (탭 자동 열기 및 이동)
+watch(() => ctiStore.incomingCall, (newCall) => {
+	if (newCall && newCall.type === 'INBOUND_CALL') {
+		console.log('🚀 [CTI] 인바운드 전화 감지, 통합고객지원(HGIA010U) 화면으로 자동 전환');
+
+		const pgmId = 'HGIA010U';
+		const pgmNm = '통합고객지원';
+
+		// 1. 라우터에 동적 경로 등록 (이미 있으면 건너뜀)
+		addDynamicRoute(pgmId, pgmNm, 'CRM'); // 💡 CRM 그룹으로 지정
+
+		// 2. 탭 추가 및 해당 페이지로 강제 이동
+		tabStore.addTab({
+			pgmId: pgmId,
+			pgmNm: pgmNm,
+			path: `/${pgmId}`
+		});
+	}
+}, { deep: true });
 </script>
 
 <template>

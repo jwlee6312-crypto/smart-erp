@@ -20,7 +20,7 @@ public class Hsio250u {
     private String custcd;
     private String deptcd;
     private String whcd;
-    private String addres;
+    private String address;
     private String remark;
     private String cfmyn;
     private String gubun;

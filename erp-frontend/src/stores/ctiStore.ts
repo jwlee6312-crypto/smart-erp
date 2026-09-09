@@ -15,11 +15,16 @@ export const useCtiStore = defineStore('cti', () => {
 	let ringtoneAudio: HTMLAudioElement | null = null
 
 	const connect = () => {
-		const targetExten = authStore.extension;
+		const targetExten = authStore.inner_no; // 💡 extension -> inner_no 수정
 		if (!targetExten) return;
 		if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 		
-		const wsUrl = `ws://${window.location.hostname}:8080/ws/cti?exten=${targetExten}`;
+		// 💡 [서버 환경 대응] 도메인이 아닌 서버 IP 환경에서도 소켓이 정확히 연결되도록 보정
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const host = window.location.host; // 172.30.1.11:80 형식 대응
+		const wsUrl = `${protocol}//${host}/api/ws/cti?exten=${targetExten}`;
+
+		console.log('🔌 [CTI] 소켓 연결 시도:', wsUrl);
 		socket = new WebSocket(wsUrl)
 
 		socket.onopen = () => { isConnected.value = true; }
@@ -60,7 +65,7 @@ export const useCtiStore = defineStore('cti', () => {
 		stopRingtone();
 	}
 
-	watch(() => authStore.extension, (newExt) => {
+	watch(() => authStore.inner_no, (newExt) => { // 💡 extension -> inner_no 수정
 		if (newExt && !isConnected.value) connect();
 	}, { immediate: true });
 

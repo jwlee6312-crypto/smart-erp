@@ -51,13 +51,13 @@
                 <th rowspan="2" class="frozen-col" style="width: 120px;">규격</th>
                 <th rowspan="2" class="frozen-col" style="width: 60px;">단위</th>
                 <th rowspan="2" class="frozen-col last-frozen" style="width: 60px;">구분</th>
-                <th v-for="h in daysHeaders" :key="h.DD" class="date-header">
-                  {{ h.DD }}일
+                <th v-for="h in daysHeaders" :key="h.dd" class="date-header">
+                  {{ h.dd }}일
                 </th>
               </tr>
               <tr class="header-sub">
-                <th v-for="h in daysHeaders" :key="h.DD" :class="['day-header', {'text-danger': h.WW==='일', 'text-primary': h.WW==='토'}]">
-                  ({{ h.WW }})
+                <th v-for="h in daysHeaders" :key="h.dd" :class="['day-header', {'text-danger': h.ww==='일', 'text-primary': h.ww==='토'}]">
+                  ({{ h.ww }})
                 </th>
               </tr>
             </thead>
@@ -144,14 +144,20 @@ const fetchList = async () => {
   try {
     // 1) 헤더 정보(요일) 가져오기
     const headerRes = await api.post('/hppl/HPPL_100U_STR', {
-      actkind: 'S1', cmpycd: authStore.cmpycd, yymmDD: searchData.ymd
+      actkind: 'S1',
+      cmpycd: authStore.cmpycd,
+      linecd: '',
+      progcd: '',
+      yymmdd: searchData.ymd,
+      plnqty: 0
     })
     daysHeaders.value = headerRes.data
     const lastDayCount = daysHeaders.value.length
 
     // 2) 실제 수불 데이터 가져오기
     const dataRes = await api.post('/hppl/HPPL_110S_STR', {
-      cmpycd: authStore.cmpycd, iyymmDD: searchData.ymd
+      cmpycd: authStore.cmpycd,
+      yymmdd: searchData.ymd
     })
 
     // 3) 데이터 그룹화 및 재고 계산 (ASP 로직 이식)
@@ -160,7 +166,10 @@ const fetchList = async () => {
     const itemMap = new Map()
 
     rawList.forEach((row: any) => {
-      const id = row.itemcd
+      // 💡 공백 제거(trim) 처리로 정확한 매칭 보장
+      const id = String(row.itemcd || '').trim()
+      if (!id) return
+
       if (!itemMap.has(id)) {
         const itemObj = {
           itemcd: id,
@@ -183,7 +192,10 @@ const fetchList = async () => {
       const gbn = String(row.gbn) // 1:기초, 2:입고, 3:출고
 
       for (let i = 0; i < lastDayCount; i++) {
-        const val = Number(row[i + 5] || row[String(i + 1)] || 0)
+        // 💡 서버에서 내려오는 'qty_01', 'qty_02' 형식의 키에 맞춰 데이터 추출
+        const key = `qty_${String(i + 1).padStart(2, '0')}`
+        const val = Number(row[key] || 0)
+
         if (gbn === '1') item.dailyData.Bsqty[i] = val
         else if (gbn === '2') item.dailyData.inqty[i] = val
         else if (gbn === '3') item.dailyData.outqty[i] = val
@@ -219,7 +231,7 @@ const exportExcel = () => {
   const wsData: any[] = []
   // 헤더 생성
   const headerRow = ["품목명", "규격", "단위", "구분"]
-  daysHeaders.value.forEach(h => headerRow.push(`${h.DD}일(${h.WW})`))
+  daysHeaders.value.forEach(h => headerRow.push(`${h.dd}일(${h.ww})`))
   wsData.push(headerRow)
 
   // 데이터 행 생성

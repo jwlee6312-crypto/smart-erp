@@ -31,9 +31,5 @@ public class Hsod101u {
 
     // 프론트엔드 수신용 (DB 파라미터 아님)
     private String price;
-
-    @JsonAlias("amtsum")
-    public void setAmtsum(String amtsum) {
-        this.ordamt = amtsum;
-    }
+    private String amtsum;
 }

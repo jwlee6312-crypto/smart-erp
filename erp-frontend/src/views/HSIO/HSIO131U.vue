@@ -200,7 +200,7 @@ async function fetchList() {
  * 🚀 전표 발행 로직 (통합 백엔드 서비스 방식 - HSIP140U 표준 모델 준수)
  */
 async function saveSlip() {
-  const selectedRows = grid?.getSelectedData().filter((r: any) => r.procyn === true) || []
+  const selectedRows = grid?.getSelectedData() || []
   if (selectedRows.length === 0) return vAlertError('발행할 항목을 선택하세요.')
 
   const slipymd = formData.slipymd.replace(/-/g, '');
@@ -248,16 +248,17 @@ async function saveSlip() {
 }
 
 const toggleAllRows = () => {
-  const rows = grid?.getRows(); if (!rows) return
-  const allSelected = rows.every(r => r.getData().procyn === true)
-  rows.forEach(r => r.update({ procyn: !allSelected }))
-  calcTotalSum();
+  if(!grid) return;
+  const rows = grid.getRows();
+  const selectedRows = grid.getSelectedRows();
+  if (rows.length === selectedRows.length) grid.deselectRow();
+  else grid.selectRow();
 }
 
 const calcTotalSum = () => {
-    const data = grid?.getData() || [];
-    totalSelectedAmt.value = data.filter((r: any) => r.procyn === true)
-                                .reduce((acc, cur: any) => acc + (Number(cur.spyamt) + Number(cur.vatamt)), 0);
+    if(!grid) return;
+    const data = grid.getSelectedData();
+    totalSelectedAmt.value = data.reduce((acc, cur: any) => acc + (Number(cur.spyamt || 0) + Number(cur.vatamt || 0)), 0);
 }
 
 function initialize() {
@@ -277,25 +278,24 @@ onMounted(async () => {
   await fetchClosingInfo();
   if (mainGridRef.value) {
     grid = new Tabulator(mainGridRef.value, {
-      layout: 'fitColumns', height: '100%',
+      layout: 'fitColumns', height: '100%', selectable: true,
       columnDefaults: { headerSort: false, headerHozAlign: "center", hozAlign: 'right', vertAlign: "middle", minWidth: 100 },
       columns: [
-        { title: '선택', field: 'procyn', hozAlign: 'center', width: 60, formatter: 'tickCross', editor: true,
-          cellClick: () => { nextTick(calcTotalSum); }
-        },
+        { title: "선택", width: 50, hozAlign: "center", formatter: "rowSelection", titleFormatter: "rowSelection", headerSort: false },
         { title: '발행일', field: 'jsanymd', width: 110, hozAlign: 'center',
           formatter: (c) => { const v = c.getValue(); return v && v.length === 8 ? `${v.substring(0,4)}-${v.substring(4,6)}-${v.substring(6,8)}` : v }
         },
-        { title: '부서', field: 'deptnm', width: 150, hozAlign: 'left' },
+        { title: '부서', field: 'deptnm', width: 180, hozAlign: 'left' },
         { title: '거래처', field: 'custnm', minWidth: 200, widthGrow: 2, hozAlign: 'left', cssClass: 'text-dark' },
-        { title: '사업장', field: 'unitnm', width: 120, hozAlign: 'left' },
-        { title: '유형', field: 'vattypenm', width: 120, hozAlign: 'left' },
-        { title: '공급가', field: 'spyamt', width: 120, formatter: 'money', formatterParams: { precision: 0 } },
-        { title: '부가세', field: 'vatamt', width: 110, formatter: 'money', formatterParams: { precision: 0 } },
-        { title: '합계', field: 'jsansum', width: 130, formatter: 'money', cssClass: 'bg-light fw-bold',
+        { title: '사업장', field: 'unitnm', width: 180, hozAlign: 'left' },
+        { title: '유형', field: 'vattypenm', width: 180, hozAlign: 'left' },
+        { title: '공급가', field: 'spyamt', width: 150, formatter: 'money', formatterParams: { precision: 0 } },
+        { title: '부가세', field: 'vatamt', width: 150, formatter: 'money', formatterParams: { precision: 0 } },
+        { title: '합계', field: 'jsansum', width: 150, formatter: 'money', cssClass: 'bg-light fw-bold',
           mutatorData: (v, d) => Number(d.spyamt || 0) + Number(d.vatamt || 0) }
       ]
-    })
+    });
+    grid.on("rowSelectionChanged", calcTotalSum);
   }
   fetchList();
 })

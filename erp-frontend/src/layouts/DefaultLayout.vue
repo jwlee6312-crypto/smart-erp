@@ -19,15 +19,15 @@
         <nav class="erp-tab-bar custom-scrollbar">
           <div
             v-for="tab in tabStore.tabs"
-            :key="tab.pgmId"
+            :key="tab.path"
             class="erp-tab-item"
-            :class="{ 'is-active': tabStore.activeTabId === tab.pgmId }"
+            :class="{ 'is-active': tabStore.activeTabId === tab.path }"
             @click="tabStore.selectTab(tab)"
-            @contextmenu.prevent="tabStore.closeOtherTabs(tab.pgmId)"
+            @contextmenu.prevent="tabStore.closeOtherTabs(tab.path)"
           >
             <i class="bi bi-file-earmark-text me-2 tab-icon"></i>
             <span class="tab-title">{{ tab.pgmNm }}</span>
-            <span class="tab-close" @click.stop="tabStore.closeTab(tab.pgmId)">
+            <span class="tab-close" @click.stop="tabStore.closeTab(tab.path)">
               <i class="bi bi-x-lg"></i>
             </span>
           </div>
@@ -37,7 +37,7 @@
         <section class="erp-page-container">
           <router-view v-slot="{ Component, route }">
             <keep-alive :include="tabStore.tabs.map(t => t.pgmId)">
-              <component :is="Component" :key="route.name" />
+              <component :is="Component" :key="route.fullPath" />
             </keep-alive>
           </router-view>
         </section>
